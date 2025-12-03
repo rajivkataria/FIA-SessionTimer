@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Session Timer — Feminine Intelligence Theme</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+  /* ================= THEME (accessible, warm, feminine) ================= */
+  :root {
+    color-scheme: dark;
+
+    /* Base */
+    --bg:            #120f16;   /* deep plum */
+    --surface:       #191625;   /* card */
+    --surface-2:     #221c33;   /* table header / inputs */
+    --text:          #f7f2fa;   /* primary text */
+    --muted:         #cbbfd7;   /* secondary text */
+
+    /* Accents */
+    --accent:        #b583c6;   /* lavender */
+    --accent-strong: #d0a6e6;   /* brighter lavender */
+    --accent-ghost:  #2c2140;   /* subtle lavender outline */
+
+    /* Success/primary cue color (gentle mint) */
+    --good:          #9be5c0;
+    --good-ink:      #0f1c17;
+    --good-ghost:    #113227;
+
+    /* Warning / time-up (rose/coral) */
+    --warn:          #ffb3c1;
+    --warn-ink:      #2d0f17;
+    --warn-ghost:    #3a1520;
+
+    /* Table borders */
+    --line:          #2b2340;
+
+    /* Big timer digits */
+    --digits:        #ffd6e5;   /* soft rose */
+  }
+
+  /* ================= Layout & Base ================= */
+  html,body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font:600 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+  }
+
+  .top{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:12px 16px;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:3
+  }
+
+  .wrap{
+    display:grid;grid-template-columns:520px 1fr;gap:22px;padding:18px
+  }
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--accent-ghost);
+    border-radius:16px;
+    padding:18px 20px;
+    box-shadow:0 10px 28px rgba(0,0,0,.28)
+  }
+
+  .label{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+
+  .name{
+    font-size:48px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+
+  .big{
+    font-size:96px;margin-top:10px;letter-spacing:1px;
+    color:var(--digits);
+    text-shadow:0 0 18px rgba(255,214,229,.25)
+  }
+
+  .muted{color:var(--muted)}
+  .spacer{flex:1}
+
+  /* ================= Inputs & Buttons ================= */
+  input[type="text"],input[type="number"]{
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--accent-ghost);
+    border-radius:12px;
+    padding:10px 12px
+  }
+
+  .preset button{
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--accent-ghost);
+    border-radius:12px;padding:8px 12px;cursor:pointer
+  }
+
+  button{
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--accent-ghost);
+    border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:700
+  }
+
+  .primary{
+    background:linear-gradient(180deg, var(--accent-strong), var(--accent));
+    color:#2b1736;border:1px solid var(--accent-strong)
+  }
+
+  .primary:active{transform:translateY(1px)}
+
+  .warn{
+    background:linear-gradient(180deg, var(--warn), #ff9fb1);
+    color:var(--warn-ink);border:1px solid #ffa4b6
+  }
+
+  #muteBtn{
+    background:var(--good-ghost);
+    border:1px solid #1b4a3a;
+    color:var(--good)
+  }
+
+  .kbd{
+    font:700 12px/1.1 ui-monospace,Menlo,Consolas,monospace;
+    padding:2px 6px;border-radius:6px;
+    border:1px solid var(--accent-ghost);
+    background:var(--surface-2);
+    color:var(--muted)
+  }
+
+  /* ================= Table ================= */
+  .grid{max-height:70vh;overflow:auto;margin-top:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+  th{position:sticky;top:0;background:var(--surface);z-index:1}
+
+  tr.active{
+    background:rgba(181,131,198,.12); /* lavender wash */
+    outline:1px solid var(--accent-ghost)
+  }
+
+  /* ================= Banners (cues) ================= */
+  .banner{
+    position:fixed;left:50%;top:80px;transform:translateX(-50%);
+    min-width:60%;max-width:90%;
+    text-align:center;padding:14px 18px;border-radius:14px;
+    border:1px solid #2c6e49;
+    background:var(--good-ghost);color:var(--good);
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+    font-size:28px;letter-spacing:.5px;z-index:4;opacity:0;pointer-events:none;
+    transition:opacity .2s, transform .2s
+  }
+  .banner.show{opacity:1;transform:translate(-50%,0)}
+  .banner.warn{background:var(--warn-ghost); color:var(--warn); border-color:#7a2a3a}
+
+  /* ================= Log ================= */
+  .log{
+    font:500 13px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    background:var(--bg);border:1px solid var(--accent-ghost);
+    border-radius:10px;padding:10px;max-height:160px;overflow:auto;color:var(--muted)
+  }
+
+  /* ================= Setup / Timer Screens ================= */
+  #setupScreen{
+    max-width:720px;
+    margin:18px auto;
+  }
+  #setupScreen .row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    align-items:center;
+  }
+  #setupScreen input[type="number"]{
+    width:100px;
+  }
+  #sectionsContainer{
+    width:100%;
+  }
+  .section-row{
+    margin-top:6px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  #timerScreen{
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= SETUP SCREEN ================= -->
+<div id="setupScreen" class="panel">
+  <div class="label">Session Setup</div>
+  <div style="margin-top:10px;">
+    <div class="row">
+      <label class="muted">Session title</label>
+      <input id="sessionTitle" type="text" placeholder="Listening Lab Session">
+    </div>
+    <div class="row">
+      <label class="muted">Total session minutes (used if no sections)</label>
+      <input id="sessionDuration" type="number" min="5" max="240" value="60">
+    </div>
+    <div class="row">
+      <label class="muted">Speaker names (comma separated)</label>
+      <input id="sessionSpeakers" type="text" placeholder="Rajiv, Kush, Khashim">
+    </div>
+
+    <div class="row" style="flex-direction:column;align-items:flex-start;margin-top:16px;">
+      <label class="muted">Sections (optional — if left empty, we'll treat the whole session as one block)</label>
+      <div id="sectionsContainer"></div>
+      <button type="button" class="primary" style="margin-top:8px;" onclick="addSectionRow()">+ Add Section</button>
+      <span class="muted" style="font-size:12px;margin-top:4px;">
+        Example: “Intro — 10 min”, “Sharing — 40 min”, “Reflection — 10 min”
+      </span>
+    </div>
+
+    <div class="row" style="margin-top:18px;">
+      <button class="primary" onclick="startFromSetup()">Start Session</button>
+      <button class="warn" onclick="clearSetup()">Clear</button>
+      <span class="muted" style="font-size:13px;">
+        We’ll split the current section’s time equally between speakers. You can fine-tune or gift time once the session starts.
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TIMER SCREEN ================= -->
+<div id="timerScreen">
+
+  <!-- ================= Top Bar ================= -->
+  <div class="top">
+    <div class="preset" style="display:flex;gap:8px;align-items:center">
+      <span class="muted">Presets:</span>
+      <button onclick="applyPreset(4)">4 speakers</button>
+      <button onclick="applyPreset(5)">5 speakers</button>
+      <button onclick="applyPreset(6)">6 speakers</button>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="newName" type="text" placeholder="Add speaker name (Enter)">
+      <input id="newMins" type="number" min="1" max="120" value="5" style="width:90px" title="Minutes">
+      <button class="primary" onclick="addSpeaker()">Add</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="primary" onclick="restartSession()" title="Edit / Restart Session">Restart Session</button>
+      <button id="startBtn" class="primary" onclick="toggleStart()">Start</button>
+      <button onclick="openOverlay()" title="O">Overlay Mode</button>
+      <button onclick="nextSpeaker()" title="N">Next</button>
+      <button onclick="extendOne()" title="+">+1 min</button>
+      <button onclick="nextSection()" title="Next Section">Next Section</button>
+      <button class="warn" onclick="resetAll()" title="R">Reset</button>
+      <button id="muteBtn" onclick="toggleMute()" title="M">Mute</button>
+      <button onclick="exportCSV()" title="Export CSV">Export CSV</button>
+    </div>
+
+    <div class="muted" style="width:100%">
+      Hotkeys: <span class="kbd">Space</span> start/pause • <span class="kbd">N</span> next speaker •
+      <span class="kbd">+</span> +1 min • <span class="kbd">R</span> reset • <span class="kbd">M</span> mute •
+      <span class="kbd">1–9</span> jump
+    </div>
+  </div>
+
+  <!-- ================= Cue Banner ================= -->
+  <div id="banner" class="banner"></div>
+
+  <!-- ================= Main ================= -->
+  <div class="wrap">
+    <div class="panel">
+      <div class="label">Now Speaking</div>
+      <div id="curName" class="name">—</div>
+      <div id="curTime" class="big">00:00</div>
+      <div class="muted" id="preHint" style="margin-top:12px">
+        Edit minutes &amp; order below before starting.
+        Use 🎁 button to gift time to the current speaker.
+      </div>
+      <div class="muted" id="sessionMeta" style="margin-top:8px;font-size:13px;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="label">Schedule</div>
+      <div class="grid">
+        <table>
+          <thead>
+          <tr>
+            <th style="width:42px">#</th>
+            <th>Name</th>
+            <th style="width:140px">Minutes</th>
+            <th style="width:140px">Remaining</th>
+            <th style="width:220px">Actions</th>
+          </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="label">Event Log</div>
+          <button id="logToggleBtn" type="button" style="padding:4px 10px;font-size:12px;" onclick="toggleLog()">Show</button>
+        </div>
+        <div id="log" class="log" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Script ================= -->
+<script>
+/* ---------------- State ---------------- */
+const STORAGE_KEY="session_timer_v2";
+let state = {
+  idx:0,
+  running:false,
+  startMs:0,
+  mute:false,
+  speakers:[],
+  sessionTitle:"",
+  totalMinutes:0,
+  sections:[],
+  currentSectionIdx:0
+};
+window.state = state;  
+let rafId=0;
+
+/* ---------------- Utils ---------------- */
+const pad2 = n => String(n).padStart(2,"0");
+const fmt = s => { s=Math.max(0,Math.round(s)); const m=Math.floor(s/60),sec=s%60; return `${pad2(m)}:${pad2(sec)}`; };
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    idx:state.idx,
+    running:false,
+    startMs:0,
+    mute:state.mute,
+    speakers:state.speakers,
+    sessionTitle:state.sessionTitle || "",
+    totalMinutes:state.totalMinutes || 0,
+    sections:state.sections || [],
+    currentSectionIdx:state.currentSectionIdx || 0
+  }));
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
+    const s=JSON.parse(raw);
+    state.idx=s.idx||0;
+    state.mute=!!s.mute;
+    state.sessionTitle = s.sessionTitle || "";
+    state.totalMinutes = s.totalMinutes || 0;
+    state.sections = Array.isArray(s.sections)? s.sections : [];
+    state.currentSectionIdx = s.currentSectionIdx || 0;
+    if(Array.isArray(s.speakers)) state.speakers=s.speakers;
+  }catch{}
+}
+function openOverlay(){
+  window.open(
+    "overlay.html",
+    "overlayWindow",
+    "width=500,height=200,alwaysRaised=yes,resizable=yes"
+  );
+}
+/* ---------------- Audio ---------------- */
+let audioCtx;
+function beep(freq=880,dur=0.12,vol=0.06){
+  if(state.mute) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type="sine"; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    setTimeout(()=>o.stop(), dur*1000);
+  }catch{}
+}
+
+/* ---------------- Logging ---------------- */
+const logEl=document.getElementById("log");
+const logToggleBtn=document.getElementById("logToggleBtn");
+const logs=[];
+function logEvent(evt,extra=""){
+  const ts=new Date().toISOString();
+  const name=state.speakers[state.idx]?.name ?? "—";
+  const line=`[${ts}] ${evt}${name?` — ${name}`:""}${extra?` (${extra})`:""}`;
+  logs.push(line);
+  logEl.textContent=logs.slice(-200).join("\n");
+  // auto scroll when visible
+  if(logEl.style.display !== "none"){
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+function exportCSV(){
+  const lines=["timestamp,event,speaker,extra"];
+  for(const line of logs){
+    const m=line.match(/^\[(.*?)\]\s(.*?)\s—\s(.*?)(?:\s\((.*?)\))?$/)||line.match(/^\[(.*?)\]\s(.*)$/);
+    if(m&&m.length>=3){
+      const ts=m[1],evt=m[2],sp=m[3]||"",ex=m[4]||"";
+      lines.push(`"${ts}","${evt.replace(/"/g,'""')}","${sp.replace(/"/g,'""')}","${ex.replace(/"/g,'""')}"`);
+    }
+    else {
+      lines.push(`"${line.replace(/"/g,'""')}"`);
+    }
+  }
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="session_log.csv"; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function toggleLog(){
+  if(logEl.style.display === "none"){
+    logEl.style.display = "block";
+    logToggleBtn.textContent = "Hide";
+    logEl.scrollTop = logEl.scrollHeight;
+  } else {
+    logEl.style.display = "none";
+    logToggleBtn.textContent = "Show";
+  }
+}
+
+/* ---------------- Elements ---------------- */
+const tbody=document.getElementById("tbody");
+const curNameEl=document.getElementById("curName");
+const curTimeEl=document.getElementById("curTime");
+const bannerEl=document.getElementById("banner");
+const preHint=document.getElementById("preHint");
+const startBtn=document.getElementById("startBtn");
+const muteBtn=document.getElementById("muteBtn");
+const sessionMetaEl=document.getElementById("sessionMeta");
+
+/* ---------------- Section Setup Helpers ---------------- */
+function addSectionRow(title="", minutes=10){
+  const c=document.getElementById("sectionsContainer");
+  const div=document.createElement("div");
+  div.className="section-row";
+  div.innerHTML = `
+    <input type="text" placeholder="Section title" value="${title}">
+    <input type="number" min="1" max="240" value="${minutes}" style="width:90px">
+    <button type="button" class="warn" onclick="this.parentElement.remove()">✕</button>
+  `;
+  c.appendChild(div);
+}
+
+function initSetupFromState(){
+  const container=document.getElementById("sectionsContainer");
+  if(!container) return;
+  container.innerHTML="";
+  if(state.sections && state.sections.length){
+    state.sections.forEach(sec=> addSectionRow(sec.title || "", sec.minutes || 10));
+  }
+}
+
+/* ---------------- Setup Screen Logic ---------------- */
+function startFromSetup(){
+  const title = document.getElementById("sessionTitle").value.trim();
+  const totalInput = Math.max(5, Math.min(240, parseInt(document.getElementById("sessionDuration").value||60,10)));
+  const namesRaw = document.getElementById("sessionSpeakers").value.trim();
+
+  let names = [];
+  if(namesRaw){
+    names = namesRaw.split(",").map(n=>n.trim()).filter(Boolean);
+  }
+  if(!names.length){
+    names = ["Speaker 1","Speaker 2","Speaker 3","Speaker 4"];
+  }
+
+  // Build sections from setup
+  let sections=[];
+  document.querySelectorAll("#sectionsContainer .section-row").forEach(row=>{
+    const inputs=row.querySelectorAll("input");
+    const t=inputs[0].value.trim();
+    const m=parseInt(inputs[1].value,10);
+    if(!isNaN(m) && m>0){
+      sections.push({title:t, minutes:m});
+    }
+  });
+
+  if(!sections.length){
+    // fallback: single block equal to totalInput
+    sections=[{title:"", minutes:totalInput}];
+  }
+
+  state.sections = sections;
+  state.currentSectionIdx = 0;
+  state.totalMinutes = sections.reduce((sum,s)=>sum+s.minutes,0);
+  state.sessionTitle = title || "";
+
+  // Equal split for first section
+  const firstMinutes = sections[0].minutes;
+  const per = Math.max(1, Math.floor(firstMinutes / names.length));
+  state.speakers = names.map(n=>({name:n, mins:per, remainingSec:per*60}));
+  state.idx=0;
+  state.running=false;
+  state.startMs=0;
+
+  save();
+  render();
+  document.getElementById("setupScreen").style.display="none";
+  document.getElementById("timerScreen").style.display="block";
+  logEvent("Session started from setup",`sections: ${sections.length}, total ~${state.totalMinutes} min`);
+}
+
+function clearSetup(){
+  document.getElementById("sessionTitle").value = "";
+  document.getElementById("sessionDuration").value = 60;
+  document.getElementById("sessionSpeakers").value = "";
+  document.getElementById("sectionsContainer").innerHTML = "";
+}
+
+function restartSession(){
+  state.running=false;
+  cancelAnimationFrame(rafId);
+
+  const names = state.speakers.map(s=>s.name).join(", ");
+  const total = state.totalMinutes || 60;
+
+  document.getElementById("sessionTitle").value = state.sessionTitle || "";
+  document.getElementById("sessionDuration").value = total;
+  document.getElementById("sessionSpeakers").value = names;
+  initSetupFromState();
+
+  document.getElementById("setupScreen").style.display="block";
+  document.getElementById("timerScreen").style.display="none";
+}
+
+/* ---------------- Presets & Editing ---------------- */
+function applyPreset(n){
+  if(state.running){ toast("Pause to change preset"); return; }
+  const minutes=5;
+  state.speakers=Array.from({length:n},(_,i)=>({name:`Speaker ${i+1}`,mins:minutes,remainingSec:minutes*60}));
+  state.idx=0;
+  state.sessionTitle="";
+  state.sections=[{title:"", minutes:minutes*n}];
+  state.currentSectionIdx=0;
+  state.totalMinutes = minutes*n;
+  save(); render();
+}
+function addSpeaker(){
+  if(state.running){ toast("Pause to add"); return; }
+  const name=document.getElementById("newName").value.trim();
+  const mins=Math.max(1,Math.min(120,parseInt(document.getElementById("newMins").value||5,10)));
+  if(!name) return;
+  state.speakers.push({name,mins,remainingSec:mins*60});
+  document.getElementById("newName").value="";
+  state.totalMinutes = state.speakers.reduce((sum,s)=>sum+s.mins,0);
+  save(); render();
+}
+function removeSpeaker(i){
+  if(state.running){ toast("Pause to remove"); return; }
+  state.speakers.splice(i,1);
+  state.idx=Math.min(state.idx,state.speakers.length-1);
+  if(state.idx<0) state.idx=0;
+  state.totalMinutes = state.speakers.reduce((sum,s)=>sum+s.mins,0);
+  save(); render();
+}
+function move(i,dir){
+  if(state.running){ toast("Pause to reorder"); return; }
+  const j=i+dir; if(j<0||j>=state.speakers.length) return;
+  const tmp=state.speakers[i]; state.speakers[i]=state.speakers[j]; state.speakers[j]=tmp;
+  if(state.idx===i) state.idx=j; else if(state.idx===j) state.idx=i;
+  save(); render();
+}
+function editMins(i,val){
+  if(state.running){ toast("Pause to edit"); return; }
+  const mins=Math.max(1,Math.min(120,parseInt(val||5,10)));
+  state.speakers[i].mins=mins; state.speakers[i].remainingSec=mins*60;
+  state.totalMinutes = state.speakers.reduce((sum,s)=>sum+s.mins,0);
+  save(); render();
+}
+
+/* ---------------- Flow ---------------- */
+function toggleStart(){
+  if(!state.speakers.length){ toast("Add speakers or start from setup"); return; }
+  state.running=!state.running;
+  if(state.running){
+    state.startMs=performance.now();
+    preHint.style.display="none";
+    startBtn.textContent="Pause";
+    logEvent("Start");
+    rafId=requestAnimationFrame(tick);
+  } else {
+    accumulateElapsed();
+    startBtn.textContent="Start";
+    logEvent("Pause");
+    save(); render(); cancelAnimationFrame(rafId);
+  }
+}
+function nextSpeaker(manual=true){
+  accumulateElapsed(); cueSwap();
+  if(manual) logEvent("Next");
+  state.idx=(state.idx+1)%Math.max(1,state.speakers.length);
+  state.startMs=performance.now(); save(); render();
+}
+function extendOne(){
+  const s=current(); if(!s) return;
+  s.mins+=1; s.remainingSec+=60;
+  state.totalMinutes = state.speakers.reduce((sum,x)=>sum+x.mins,0);
+  logEvent("+1 minute","extended");
+  banner("Extended +1: "+s.name);
+  beep(720,0.12);
+  save(); render();
+}
+function resetAll(){
+  state.running=false; state.startMs=0; state.idx=0;
+  state.speakers.forEach(s=>{s.remainingSec=s.mins*60;});
+  logs.length=0; logEl.textContent="";
+  startBtn.textContent="Start"; preHint.style.display="";
+  logEvent("Reset",""); save(); render();
+}
+function toggleMute(){ state.mute=!state.mute; muteBtn.textContent=state.mute?"Unmute":"Mute"; save(); }
+function current(){ return state.speakers[state.idx]; }
+function accumulateElapsed(){
+  if(!state.running) return;
+  const s=current(); if(!s) return;
+  const now=performance.now(); const delta=(now-state.startMs)/1000;
+  s.remainingSec=Math.max(0,s.remainingSec-delta); state.startMs=now;
+}
+
+/* ---------------- Sections Runtime ---------------- */
+function nextSection(){
+  if(!state.sections || !state.sections.length){
+    toast("No sections defined."); return;
+  }
+  const cur = state.currentSectionIdx || 0;
+  if(cur >= state.sections.length-1){
+    toast("Already in last section."); return;
+  }
+  accumulateElapsed();
+  state.running=false;
+  startBtn.textContent="Start";
+
+  const next = cur+1;
+  state.currentSectionIdx = next;
+  const sec = state.sections[next];
+  const per = Math.max(1, Math.floor(sec.minutes / Math.max(1,state.speakers.length)));
+  state.speakers.forEach(s=>{
+    s.mins = per;
+    s.remainingSec = per*60;
+  });
+  state.idx=0;
+  resetCues();
+  logEvent("Next section", `to index ${next+1}`);
+  banner(`Section ${next+1}: ${sec.title || ""} (${sec.minutes} min)`);
+  save();
+  render();
+}
+
+/* ---------------- Gift Time (only adds to current) ---------------- */
+function giftFrom(i){
+  const giver = state.speakers[i];
+  const receiver = current();
+  if(!giver || !receiver) return;
+  if(i === state.idx){
+    toast("Current speaker can't gift to themselves.");
+    return;
+  }
+
+  receiver.mins += 1;
+  receiver.remainingSec += 60;
+
+  logEvent("Gifted +1m", `${giver.name} → ${receiver.name}`);
+  banner(`${giver.name} gifted +1 min to ${receiver.name}`);
+  beep(820,0.12);
+  save(); render();
+}
+
+/* ---------------- Cues ---------------- */
+let fired5=false,fired1=false,fired0=false;
+function resetCues(){ fired5=fired1=fired0=false; }
+
+function banner(text,warn=false){
+  bannerEl.textContent=text;
+  bannerEl.className="banner show"+(warn?" warn":"");
+  setTimeout(()=>bannerEl.classList.remove("show"),3200);
+}
+function cue5(){ logEvent("Cue: 5 minutes left"); banner("5 minutes left"); beep(880,0.10); }
+function cue1(){ logEvent("Cue: 1 minute left"); banner("1 minute left"); beep(880,0.10); setTimeout(()=>beep(880,0.10),150); }
+function cue0(){
+  logEvent("Cue: Time — please wrap"); banner("Time — please wrap",true);
+  beep(700,0.12); setTimeout(()=>beep(600,0.12),140); setTimeout(()=>beep(500,0.12),280);
+}
+function cueSwap(){ banner("Swap speakers now",true); beep(920,0.12); setTimeout(()=>beep(720,0.12),140); }
+
+/* ---------------- Tick ---------------- */
+function tick(){
+  const s=current(); if(!state.running||!s){ cancelAnimationFrame(rafId); return; }
+  const now=performance.now(); const delta=(now-state.startMs)/1000;
+  s.remainingSec=Math.max(0,s.remainingSec-delta); state.startMs=now;
+
+  const t=s.remainingSec;
+  if(!fired5&&t<=5*60){ fired5=true; cue5(); }
+  if(!fired1&&t<=60){ fired1=true; cue1(); }
+  if(!fired0&&t<=0){ fired0=true; cue0(); }
+
+  if(t<=-2.2){ resetCues(); nextSpeaker(false); logEvent("Auto-advance"); }
+
+  drawNow(); rafId=requestAnimationFrame(tick);
+}
+
+/* ---------------- Render ---------------- */
+function drawNow(){
+  const s=current();
+  curNameEl.textContent=s? s.name : "—";
+  curTimeEl.textContent=fmt(s? Math.max(0,s.remainingSec):0);
+
+  const count = state.speakers.length;
+
+  const total = state.totalMinutes ||
+    (state.sections && state.sections.length
+      ? state.sections.reduce((sum,sec)=>sum+sec.minutes,0)
+      : state.speakers.reduce((sum,x)=>sum+x.mins,0));
+
+  const metaParts = [];
+
+  if(state.sessionTitle){
+    metaParts.push(state.sessionTitle);
+  }
+  if(total && count){
+    metaParts.push(`${total} minutes • ${count} speakers`);
+  }
+  if(state.sections && state.sections.length){
+    const idx = state.currentSectionIdx || 0;
+    const sec = state.sections[idx];
+    if(sec){
+      const label = sec.title || `Section ${idx+1}`;
+      metaParts.push(`Section ${idx+1} of ${state.sections.length}: ${label} (${sec.minutes} min)`);
+    }
+  }
+
+  sessionMetaEl.textContent = metaParts.join(" — ");
+
+  tbody.innerHTML="";
+  state.speakers.forEach((sp,i)=>{
+    const tr=document.createElement("tr");
+    tr.className=i===state.idx? "active":"";
+    const remaining=(i===state.idx)? Math.max(0,sp.remainingSec):sp.remainingSec;
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td>${escapeHtml(sp.name)}</td>
+      <td>${editCell(i, sp.mins)}</td>
+      <td>${fmt(remaining)}</td>
+      <td>
+        <button onclick="jump(${i})" title="Jump to this speaker">Go</button>
+        <button onclick="move(${i},-1)" title="Move up">↑</button>
+        <button onclick="move(${i},1)" title="Move down">↓</button>
+        <button onclick="giftFrom(${i})" title="Gift +1 minute to current speaker">🎁</button>
+        <button class="warn" onclick="removeSpeaker(${i})" title="Remove">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+function render(){
+  startBtn.textContent=state.running? "Pause":"Start";
+  muteBtn.textContent=state.mute? "Unmute":"Mute";
+  drawNow();
+}
+function editCell(i,mins){
+  return `<input type="number" min="1" max="120" value="${mins}" style="width:86px"
+          ${state.running?'disabled':''} oninput="editMins(${i}, this.value)"/>`;
+}
+function jump(i){
+  if(state.running){
+    accumulateElapsed(); resetCues(); state.idx=i; state.startMs=performance.now();
+    logEvent("Jump","to index "+(i+1));
+  } else { state.idx=i; }
+  save(); render();
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function toast(msg){ banner(msg); }
+
+/* ---------------- Hotkeys ---------------- */
+document.addEventListener("keydown",(e)=>{
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const k=e.key.toLowerCase();
+  if(k===" "){ e.preventDefault(); toggleStart(); }
+  else if(k==="n"){ nextSpeaker(); }
+  else if(k==="+"){ extendOne(); }
+  else if(k==="r"){ resetAll(); }
+  else if(k==="m"){ toggleMute(); }
+  else if(k>="1" && k<="9"){
+    const idx=parseInt(k,10)-1;
+    if(idx < state.speakers.length) jump(idx);
+  }
+});
+
+/* ---------------- Boot ---------------- */
+load();
+render();
+
+(function decideScreen(){
+  const hasSpeakers = state.speakers && state.speakers.length>0;
+  const setup = document.getElementById("setupScreen");
+  const timer = document.getElementById("timerScreen");
+  if(hasSpeakers){
+    setup.style.display="none";
+    timer.style.display="block";
+  } else {
+    setup.style.display="block";
+    timer.style.display="none";
+  }
+  initSetupFromState();
+})();
+
+/* Expose for inline handlers */
+window.applyPreset=applyPreset;
+window.addSpeaker=addSpeaker;
+window.removeSpeaker=removeSpeaker;
+window.move=move;
+window.editMins=editMins;
+window.toggleStart=toggleStart;
+window.nextSpeaker=nextSpeaker;
+window.extendOne=extendOne;
+window.resetAll=resetAll;
+window.toggleMute=toggleMute;
+window.exportCSV=exportCSV;
+window.jump=jump;
+window.startFromSetup=startFromSetup;
+window.clearSetup=clearSetup;
+window.restartSession=restartSession;
+window.giftFrom=giftFrom;
+window.addSectionRow=addSectionRow;
+window.nextSection=nextSection;
+window.toggleLog=toggleLog;
+
+window.TimerAPI = {
+  // state access
+  getState: () => state,
+  
+  toggleStart,
+  nextSpeaker,
+  extendOne,
+  nextSection,
+  resetAll,
+  toggleMute,
+
+  jump,            
+  exportCSV,       
+
+  startFromSetup,
+  clearSetup,
+  restartSession,
+  giftFrom,
+  addSectionRow,
+  toggleLog,
+};
+
+</script>
+
+</body>
+</html>
