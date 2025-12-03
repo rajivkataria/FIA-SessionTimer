@@ -250,6 +250,21 @@
     <button onclick="applyPreset(6)">6 speakers</button>
   </div>
 
+  <!-- New: Groups UI -->
+  <div style="display:flex;flex-direction:column;gap:4px;min-width:220px;max-width:240px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="muted" style="font-size:12px">Group:</span>
+      <select id="groupSelect" style="flex:1;background:var(--surface-2);color:var(--text);border-radius:10px;border:1px solid var(--accent-ghost);padding:6px 8px;font-size:13px">
+        <option value="">(none)</option>
+      </select>
+      <button style="padding:6px 10px;font-size:12px" onclick="loadSelectedGroup()">Load</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input id="newGroupName" type="text" placeholder="Save current as group…" style="flex:1;padding:6px 8px;font-size:13px;background:var(--surface-2);color:var(--text);border-radius:10px;border:1px solid var(--accent-ghost)"/>
+      <button style="padding:6px 10px;font-size:12px" onclick="saveCurrentGroup()">Save</button>
+    </div>
+  </div>
+
   <div style="display:flex;flex-direction:column;gap:4px;min-width:230px;max-width:260px;flex:1">
     <input id="sessionTitleInput" type="text"
            placeholder="Session title (optional)"
@@ -335,6 +350,7 @@
 
 <script>
 const STORAGE_KEY="session_timer_v4_dragdrop";
+const GROUPS_KEY="session_timer_groups_v1"; // new: recurring groups
 
 let state = {
   idx: 0,
@@ -349,6 +365,7 @@ let state = {
 };
 let rafId=0;
 let dragFromIndex = null;
+let groups = []; // [{name, members:[{name, mins}]}]
 
 const pad2 = n => String(n).padStart(2,"0");
 const fmt = s => {
@@ -390,6 +407,103 @@ function load(){
       }));
     }
   }catch{}
+}
+
+/* Groups: load/save & UI */
+function loadGroups(){
+  try{
+    const raw = localStorage.getItem(GROUPS_KEY);
+    if(!raw){ groups = []; return; }
+    const parsed = JSON.parse(raw);
+    groups = Array.isArray(parsed) ? parsed : [];
+  }catch{
+    groups = [];
+  }
+}
+
+function saveGroups(){
+  localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+}
+
+function renderGroupsUI(){
+  const select = document.getElementById("groupSelect");
+  if(!select) return;
+  const currentValue = select.value;
+  select.innerHTML = `<option value="">(none)</option>`;
+  groups.forEach((g, idx)=>{
+    const opt = document.createElement("option");
+    opt.value = String(idx);
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  });
+  if(currentValue && Number(currentValue) < groups.length){
+    select.value = currentValue;
+  }
+}
+
+function saveCurrentGroup(){
+  const input = document.getElementById("newGroupName");
+  if(!input) return;
+  const name = input.value.trim();
+  if(!name){
+    banner("Name your group first");
+    return;
+  }
+  if(!state.speakers.length){
+    banner("Add speakers before saving a group");
+    return;
+  }
+
+  const members = state.speakers.map(sp => ({
+    name: sp.name,
+    mins: sp.mins || 5
+  }));
+
+  const existingIdx = groups.findIndex(g => g.name.toLowerCase() === name.toLowerCase());
+  if(existingIdx >= 0){
+    groups[existingIdx].members = members;
+  } else {
+    groups.push({ name, members });
+  }
+
+  saveGroups();
+  renderGroupsUI();
+  input.value = "";
+  banner("Group saved");
+}
+
+function loadSelectedGroup(){
+  const select = document.getElementById("groupSelect");
+  if(!select) return;
+  const idx = Number(select.value);
+  if(isNaN(idx) || idx < 0 || idx >= groups.length){
+    banner("Choose a group to load");
+    return;
+  }
+  const group = groups[idx];
+  if(!group || !Array.isArray(group.members) || !group.members.length){
+    banner("Group is empty");
+    return;
+  }
+  if(state.running){
+    banner("Pause timer before loading a group", true);
+    return;
+  }
+
+  state.speakers = group.members.map(m => ({
+    name: m.name,
+    mins: m.mins || 5,
+    remainingSec: (m.mins || 5) * 60,
+    elapsedSec: 0,
+    note: ""
+  }));
+  state.idx = 0;
+  state.sessionElapsedSec = 0;
+  logs.length = 0;
+  if(logEl) logEl.textContent = "";
+  logEvent("Load group", group.name);
+  save();
+  render();
 }
 
 let audioCtx;
@@ -551,7 +665,6 @@ function move(i,dir){
   state.speakers[i]=state.speakers[j];
   state.speakers[j]=tmp;
   save();
-  // keep current speaker by reference
   const cur = current();
   state.idx = Math.max(0, state.speakers.indexOf(cur));
   render();
@@ -764,7 +877,6 @@ function onRowDrop(e){
   const moved = arr.splice(dragFromIndex,1)[0];
   arr.splice(to,0,moved);
 
-  // keep current speaker by reference
   state.idx = Math.max(0, arr.indexOf(curSpeaker));
   dragFromIndex = null;
   save();
@@ -917,7 +1029,9 @@ document.addEventListener("keydown",(e)=>{
 });
 
 // Initialize
+loadGroups();
 load();
+renderGroupsUI();
 render();
 if(!state.speakers.length) applyPreset(4);
 
@@ -950,6 +1064,8 @@ window.copySummary=copySummary;
 window.jump=jump;
 window.editNote=editNote;
 window.updateSessionTitle=updateSessionTitle;
+window.saveCurrentGroup=saveCurrentGroup;
+window.loadSelectedGroup=loadSelectedGroup;
 </script>
 </body>
 </html>
