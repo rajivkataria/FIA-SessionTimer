@@ -47,6 +47,24 @@
     position:sticky;top:0;z-index:3
   }
 
+  /* Viewer mode: hide controls and maximize the timer for screen-share */
+  body.viewer .top{
+    display:none;
+  }
+  body.viewer .wrap{
+    grid-template-columns: minmax(0,1fr);
+    padding:24px;
+  }
+  body.viewer #schedulePanel{
+    display:none;
+  }
+  body.viewer .name{
+    font-size:64px;
+  }
+  body.viewer .big{
+    font-size:140px;
+  }
+
   .wrap{
     display:grid;grid-template-columns:520px 1fr;gap:22px;padding:18px
   }
@@ -169,6 +187,10 @@
     font-size:28px;letter-spacing:.5px;z-index:4;opacity:0;pointer-events:none;
     transition:opacity .2s, transform .2s
   }
+  body.viewer .banner{
+    font-size:40px;
+    top:40px;
+  }
   .banner.show{opacity:1;transform:translate(-50%,0)}
   .banner.warn{background:var(--warn-ghost); color:var(--warn); border-color:#7a2a3a}
 
@@ -287,6 +309,7 @@
     <button id="muteBtn" onclick="toggleMute()" title="M">Mute</button>
     <button id="autoBtn" onclick="toggleAutoAdvance()" title="Toggle automatic next speaker">Auto-advance: On</button>
     <button id="presenterBtn" onclick="togglePresenterMode()" title="Minimal view for sharing">Presenter: Off</button>
+    <button id="viewerBtn" onclick="toggleViewerMode()" title="Audience view">Viewer: Off</button>
     <button onclick="exportCSV()" title="Export CSV">Export CSV</button>
     <button onclick="copySummary()" title="Copy text summary for notes">Copy Summary</button>
   </div>
@@ -294,7 +317,7 @@
   <div class="muted" style="width:100%">
     Hotkeys: <span class="kbd">Space</span> start/pause • <span class="kbd">N</span> next •
     <span class="kbd">+</span> +1 • <span class="kbd">R</span> reset • <span class="kbd">M</span> mute •
-    <span class="kbd">1–9</span> jump
+    <span class="kbd">V</span> viewer • <span class="kbd">1–9</span> jump
   </div>
 </div>
 
@@ -316,10 +339,10 @@
     <div id="curTime" class="big">00:00</div>
     <div id="nextLine" class="muted" style="margin-top:8px">Next: —</div>
 
-    <div class="muted" id="preHint" style="margin-top:12px">
-      Edit minutes &amp; order below before starting.
-      <div class="subhint">Share this window in Zoom; use hotkeys to control without leaving the meeting.</div>
-    </div>
+  <div class="muted" id="preHint" style="margin-top:12px">
+    Edit minutes &amp; order below before starting.
+    <div class="subhint">Share this window in Zoom. For participants, send the same file with <span class="kbd">?view=1</span> in the URL for a clean audience view.</div>
+  </div>
   </div>
 
   <div id="schedulePanel" class="panel">
@@ -352,17 +375,18 @@
 const STORAGE_KEY="session_timer_v4_dragdrop";
 const GROUPS_KEY="session_timer_groups_v1"; // new: recurring groups
 
-let state = {
-  idx: 0,
-  running: false,
-  startMs: 0,
-  mute: false,
-  autoAdvance: true,
-  presenterMode: false,
-  sessionTitle: "",
-  sessionElapsedSec: 0,
-  speakers: []
-};
+  let state = {
+    idx: 0,
+    running: false,
+    startMs: 0,
+    mute: false,
+    autoAdvance: true,
+    presenterMode: false,
+    viewerMode: false,
+    sessionTitle: "",
+    sessionElapsedSec: 0,
+    speakers: []
+  };
 let rafId=0;
 let dragFromIndex = null;
 let groups = []; // [{name, members:[{name, mins}]}]
@@ -382,6 +406,7 @@ function save(){
     mute: state.mute,
     autoAdvance: state.autoAdvance,
     presenterMode: state.presenterMode,
+    viewerMode: state.viewerMode,
     sessionTitle: state.sessionTitle,
     sessionElapsedSec: state.sessionElapsedSec,
     speakers: state.speakers
@@ -397,6 +422,7 @@ function load(){
     state.mute = !!s.mute;
     state.autoAdvance = (s.autoAdvance !== undefined) ? !!s.autoAdvance : true;
     state.presenterMode = !!s.presenterMode;
+    state.viewerMode = !!s.viewerMode;
     state.sessionTitle = s.sessionTitle || "";
     state.sessionElapsedSec = s.sessionElapsedSec || 0;
     if(Array.isArray(s.speakers)){
@@ -609,6 +635,7 @@ const startBtn=document.getElementById("startBtn");
 const muteBtn=document.getElementById("muteBtn");
 const autoBtn=document.getElementById("autoBtn");
 const presenterBtn=document.getElementById("presenterBtn");
+const viewerBtn=document.getElementById("viewerBtn");
 const sessionTitleDisplay=document.getElementById("sessionTitleDisplay");
 const sessionTitleInput=document.getElementById("sessionTitleInput");
 const sessionTimeEl=document.getElementById("sessionTime");
@@ -760,11 +787,14 @@ function toggleAutoAdvance(){
 
 function togglePresenterMode(){
   state.presenterMode = !state.presenterMode;
-  if(state.presenterMode){
-    document.body.classList.add("presenter");
-  } else {
-    document.body.classList.remove("presenter");
-  }
+  if(state.presenterMode) state.viewerMode = false;
+  save();
+  render();
+}
+
+function toggleViewerMode(){
+  state.viewerMode = !state.viewerMode;
+  if(state.viewerMode) state.presenterMode = false;
   save();
   render();
 }
@@ -920,6 +950,11 @@ function drawNow(){
   } else {
     document.body.classList.remove("presenter");
   }
+  if(state.viewerMode){
+    document.body.classList.add("viewer");
+  } else {
+    document.body.classList.remove("viewer");
+  }
 
   tbody.innerHTML="";
   state.speakers.forEach((sp,i)=>{
@@ -968,6 +1003,7 @@ function render(){
   if(muteBtn) muteBtn.textContent=state.mute? "Unmute":"Mute";
   if(autoBtn) autoBtn.textContent = "Auto-advance: " + (state.autoAdvance ? "On" : "Off");
   if(presenterBtn) presenterBtn.textContent = "Presenter: " + (state.presenterMode ? "On" : "Off");
+  if(viewerBtn) viewerBtn.textContent = "Viewer: " + (state.viewerMode ? "On" : "Off");
   drawNow();
 }
 
@@ -996,6 +1032,17 @@ function escapeHtml(s){
 
 function toast(msg){ banner(msg); }
 
+function applyViewerModeFromUrl(){
+  try{
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get("view");
+    if(view && (view === "1" || view.toLowerCase() === "viewer")){
+      state.viewerMode = true;
+      state.presenterMode = false;
+    }
+  }catch{}
+}
+
 // Keyboard shortcuts – ignore when typing
 document.addEventListener("keydown",(e)=>{
   if(e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1022,6 +1069,8 @@ document.addEventListener("keydown",(e)=>{
     resetAll();
   } else if(k === "m"){
     toggleMute();
+  } else if(k === "v"){
+    toggleViewerMode();
   } else if(k >= "1" && k <= "9"){
     const idx = parseInt(k,10) - 1;
     if(idx < state.speakers.length) jump(idx);
@@ -1031,6 +1080,7 @@ document.addEventListener("keydown",(e)=>{
 // Initialize
 loadGroups();
 load();
+applyViewerModeFromUrl();
 renderGroupsUI();
 render();
 if(!state.speakers.length) applyPreset(4);
@@ -1059,6 +1109,7 @@ window.resetAll=resetAll;
 window.toggleMute=toggleMute;
 window.toggleAutoAdvance=toggleAutoAdvance;
 window.togglePresenterMode=togglePresenterMode;
+window.toggleViewerMode=toggleViewerMode;
 window.exportCSV=exportCSV;
 window.copySummary=copySummary;
 window.jump=jump;
