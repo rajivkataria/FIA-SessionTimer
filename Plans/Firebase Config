@@ -1,0 +1,16 @@
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBhgCPLRYbGUHuP12jA5GdAUDhc_mh3qXQ",
+  authDomain: "coffee-spark-ai-barista-9ebe7.firebaseapp.com",
+  projectId: "coffee-spark-ai-barista-9ebe7",
+  storageBucket: "coffee-spark-ai-barista-9ebe7.firebasestorage.app",
+  messagingSenderId: "66965375198",
+  appId: "1:66965375198:web:91a8d826275e6befc89a4f"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
