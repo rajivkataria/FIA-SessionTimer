@@ -13,10 +13,14 @@ import {
   viewerBtn,
   muteBtn,
   autoBtn,
-  startBtn
+  startBtn,
+  themeSelect,
+  sessionRingValue,
+  soundSelect
 } from "./dom.js";
 
 let dragFromIndex = null;
+let lastIdx = null;
 
 export function banner(text, warn = false){
   if(!bannerEl) return;
@@ -89,6 +93,15 @@ function onRowDragEnd(){
 
 export function drawNow(){
   const s = current();
+  if(lastIdx !== state.idx){
+    if(curNameEl) curNameEl.classList.add("speaker-animate");
+    if(curTimeEl) curTimeEl.classList.add("speaker-animate");
+    setTimeout(() => {
+      if(curNameEl) curNameEl.classList.remove("speaker-animate");
+      if(curTimeEl) curTimeEl.classList.remove("speaker-animate");
+    }, 480);
+    lastIdx = state.idx;
+  }
   if(curNameEl) curNameEl.textContent = s ? s.name : "—";
   if(curTimeEl) curTimeEl.textContent = fmt(s ? Math.max(0, s.remainingSec) : 0);
   if(sessionTimeEl) sessionTimeEl.textContent = fmt(state.sessionElapsedSec);
@@ -122,6 +135,24 @@ export function drawNow(){
     document.body.classList.add("viewer");
   } else {
     document.body.classList.remove("viewer");
+  }
+
+  if(themeSelect && themeSelect.value !== state.theme){
+    themeSelect.value = state.theme;
+  }
+  if(soundSelect && soundSelect.value !== state.soundPack){
+    soundSelect.value = state.soundPack;
+  }
+  document.body.setAttribute("data-theme", state.theme);
+
+  if(sessionRingValue){
+    const totalPlanned = state.speakers.reduce((sum, sp) => sum + (sp.mins || 0) * 60, 0);
+    const progress = totalPlanned > 0 ? Math.min(1, state.sessionElapsedSec / totalPlanned) : 0;
+    const r = 22;
+    const circumference = 2 * Math.PI * r;
+    const offset = circumference * (1 - progress);
+    sessionRingValue.style.strokeDasharray = `${circumference} ${circumference}`;
+    sessionRingValue.style.strokeDashoffset = `${offset}`;
   }
 
   if(!tbody) return;

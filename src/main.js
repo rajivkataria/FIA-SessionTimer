@@ -21,12 +21,16 @@ import {
   jump,
   editNote,
   updateSessionTitle,
+  setTheme,
+  setSoundPack,
   saveCurrentGroup,
   loadSelectedGroup,
   autoAdvanceNext,
-  renderGroupsUI
+  renderGroupsUI,
+  toggleFullscreen,
+  copyViewerLink
 } from "./exports.js";
-import { newNameInput } from "./dom.js";
+import { newNameInput, themeSelect, soundSelect, fullscreenBtn } from "./dom.js";
 
 function applyViewerModeFromUrl(){
   try{
@@ -85,6 +89,28 @@ function setupAddSpeakerEnter(){
   });
 }
 
+function setupThemeSelect(){
+  if(!themeSelect) return;
+  themeSelect.addEventListener("change", (e) => {
+    setTheme(e.target.value);
+  });
+}
+
+function setupSoundSelect(){
+  if(!soundSelect) return;
+  soundSelect.addEventListener("change", (e) => {
+    setSoundPack(e.target.value);
+  });
+}
+
+function setupFullscreen(){
+  document.addEventListener("fullscreenchange", () => {
+    const active = !!document.fullscreenElement;
+    document.body.classList.toggle("fullscreen-active", active);
+    if(fullscreenBtn) fullscreenBtn.textContent = active ? "Exit Fullscreen" : "Fullscreen";
+  });
+}
+
 // Initialize
 setAutoAdvanceHandler(autoAdvanceNext);
 loadGroups();
@@ -95,6 +121,9 @@ render();
 if(!state.speakers.length) applyPreset(4);
 setupKeyboard();
 setupAddSpeakerEnter();
+setupThemeSelect();
+setupSoundSelect();
+setupFullscreen();
 
 // expose for inline handlers
 window.applyPreset = applyPreset;
@@ -110,6 +139,8 @@ window.toggleMute = toggleMute;
 window.toggleAutoAdvance = toggleAutoAdvance;
 window.togglePresenterMode = togglePresenterMode;
 window.toggleViewerMode = toggleViewerMode;
+window.toggleFullscreen = toggleFullscreen;
+window.copyViewerLink = copyViewerLink;
 window.exportCSV = exportCSV;
 window.copySummary = copySummary;
 window.jump = jump;

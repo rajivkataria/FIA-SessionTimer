@@ -1,6 +1,6 @@
 import { state, current } from "./state.js";
 import { logEvent } from "./log.js";
-import { beep } from "./audio.js";
+import { playCue } from "./audio.js";
 import { banner, drawNow } from "./ui.js";
 
 let rafId = 0;
@@ -25,17 +25,17 @@ export function accumulateElapsed(){
   state.startMs = now;
 }
 
-function cue5(){ logEvent("Cue: 5 minutes left"); banner("5 minutes left"); beep(880, 0.10); }
-function cue1(){ logEvent("Cue: 1 minute left"); banner("1 minute left"); beep(880, 0.10); setTimeout(()=>beep(880, 0.10), 150); }
+function cue5(){ logEvent("Cue: 5 minutes left"); banner("5 minutes left"); playCue("cue5"); }
+function cue1(){ logEvent("Cue: 1 minute left"); banner("1 minute left"); playCue("cue1"); }
 function cue0(){
   logEvent("Cue: Time — please wrap");
   banner("Time — please wrap", true);
-  beep(700, 0.12); setTimeout(()=>beep(600, 0.12), 140); setTimeout(()=>beep(500, 0.12), 280);
+  playCue("time");
 }
 
 export function cueSwap(){
   banner("Swap speakers now", true);
-  beep(920, 0.12); setTimeout(()=>beep(720, 0.12), 140);
+  playCue("swap");
 }
 
 export function startTick(){

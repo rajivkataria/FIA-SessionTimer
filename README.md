@@ -1,6 +1,6 @@
 # Session Timer
 
-Single‑page, offline‑capable session timer for 4–6 speakers with clear cues, auto‑advance, and a minimal viewer mode for Zoom sharing.
+Single‑page, offline‑capable session timer for 4–6 speakers with clear cues, auto‑advance, themes, and a minimal viewer mode for Zoom sharing.
 
 ## Structure
 - `timerFIA.html` UI shell and styles
@@ -30,6 +30,11 @@ http://localhost:8000/timerFIA.html
 ```
 http://localhost:8000/timerFIA.html?view=1
 ```
+
+## Premium Controls
+- Themes: Studio, Calm, Minimal, High Contrast
+- Chimes: Classic, Soft, Bright
+- Fullscreen: `Fullscreen` button for a clean run view
 
 ## Notes
 - Everything runs locally in the browser. No accounts, no data sent.

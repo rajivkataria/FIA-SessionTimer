@@ -9,10 +9,13 @@ export const state = {
   autoAdvance: true,
   presenterMode: false,
   viewerMode: false,
+  theme: "studio",
+  soundPack: "classic",
   sessionTitle: "",
   sessionElapsedSec: 0,
   speakers: [],
-  groups: []
+  groups: [],
+  wrapCount: 0
 };
 
 export const logs = [];

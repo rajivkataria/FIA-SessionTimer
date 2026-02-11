@@ -9,6 +9,8 @@ export function save(){
     autoAdvance: state.autoAdvance,
     presenterMode: state.presenterMode,
     viewerMode: state.viewerMode,
+    theme: state.theme,
+    soundPack: state.soundPack,
     sessionTitle: state.sessionTitle,
     sessionElapsedSec: state.sessionElapsedSec,
     speakers: state.speakers
@@ -25,6 +27,8 @@ export function load(){
     state.autoAdvance = (s.autoAdvance !== undefined) ? !!s.autoAdvance : true;
     state.presenterMode = !!s.presenterMode;
     state.viewerMode = !!s.viewerMode;
+    state.theme = s.theme || "studio";
+    state.soundPack = s.soundPack || "classic";
     state.sessionTitle = s.sessionTitle || "";
     state.sessionElapsedSec = s.sessionElapsedSec || 0;
     if(Array.isArray(s.speakers)){

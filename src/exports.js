@@ -14,10 +14,14 @@ export {
   togglePresenterMode,
   toggleViewerMode,
   updateSessionTitle,
+  setTheme,
+  setSoundPack,
   jump,
+  copyViewerLink,
   saveCurrentGroup,
   loadSelectedGroup,
   autoAdvanceNext,
+  toggleFullscreen,
   renderGroupsUI
 } from "./actions.js";
 

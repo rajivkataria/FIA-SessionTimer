@@ -1,7 +1,7 @@
-import { state, current, logs } from "./state.js";
+import { state, current, logs, fmt } from "./state.js";
 import { save, saveGroups } from "./storage.js";
 import { logEvent } from "./log.js";
-import { beep } from "./audio.js";
+import { beep, playCue } from "./audio.js";
 import { banner, render, toast } from "./ui.js";
 import { accumulateElapsed, resetCues, cueSwap, startTick, stopTick } from "./timer.js";
 import {
@@ -105,7 +105,16 @@ export function nextSpeaker(manual = true){
   accumulateElapsed();
   cueSwap();
   if(manual) logEvent("Next");
+  const prevIdx = state.idx;
   state.idx = (state.idx + 1) % Math.max(1, state.speakers.length);
+  if(state.speakers.length > 1 && prevIdx === state.speakers.length - 1 && state.idx === 0){
+    state.wrapCount += 1;
+    const totalPlanned = state.speakers.reduce((sum, sp) => sum + (sp.mins || 0) * 60, 0);
+    const summary = `Wrap complete — ${fmt(state.sessionElapsedSec)} of ${fmt(totalPlanned)} planned`;
+    banner(summary, true);
+    playCue("wrap");
+    logEvent("Wrap complete", `wrap ${state.wrapCount}`);
+  }
   resetCues();
   state.startMs = performance.now();
   save();
@@ -133,6 +142,7 @@ export function resetAll(){
   state.startMs = 0;
   state.idx = 0;
   state.sessionElapsedSec = 0;
+  state.wrapCount = 0;
   state.speakers.forEach(s => {
     s.remainingSec = s.mins * 60;
     s.elapsedSec = 0;
@@ -177,6 +187,40 @@ export function updateSessionTitle(val){
   state.sessionTitle = val;
   save();
   render();
+}
+
+export function setTheme(theme){
+  state.theme = theme || "studio";
+  save();
+  render();
+}
+
+export function setSoundPack(pack){
+  state.soundPack = pack || "classic";
+  save();
+  render();
+}
+
+export function toggleFullscreen(){
+  if(document.fullscreenElement){
+    document.exitFullscreen();
+  } else if(document.documentElement.requestFullscreen){
+    state.presenterMode = true;
+    state.viewerMode = false;
+    save();
+    render();
+    document.documentElement.requestFullscreen();
+  }
+}
+
+export async function copyViewerLink(){
+  const url = `${window.location.origin}${window.location.pathname}?view=1`;
+  try{
+    await navigator.clipboard.writeText(url);
+    banner("Viewer link copied");
+  }catch{
+    banner("Could not copy link", true);
+  }
 }
 
 export function jump(i){

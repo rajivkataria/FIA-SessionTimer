@@ -30,13 +30,100 @@
     --line:          #2b2340;
 
     --digits:        #ffd6e5;
+
+    --timer-font: "Futura", "Avenir Next Condensed", "DIN Condensed", "Impact", "Trebuchet MS", sans-serif;
+    --ui-font: "Avenir Next", "Gill Sans", "Trebuchet MS", "Verdana", sans-serif;
+    --label-font: "Palatino", "Georgia", serif;
   }
 
   html,body{
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font:600 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+    font:600 16px/1.45 var(--ui-font);
+  }
+
+  body{
+    position:relative;
+    min-height:100vh;
+  }
+
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(208,166,230,0.08), transparent 60%),
+      radial-gradient(900px 600px at 90% 10%, rgba(155,229,192,0.06), transparent 55%),
+      radial-gradient(800px 500px at 50% 120%, rgba(255,179,193,0.06), transparent 60%),
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 12px);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  body > *{
+    position:relative;
+    z-index:1;
+  }
+
+  body[data-theme="calm"]{
+    --bg:#0f1719;
+    --surface:#141f22;
+    --surface-2:#1b2a2e;
+    --text:#e9f6f5;
+    --muted:#b5d2d0;
+    --accent:#6fb7b3;
+    --accent-strong:#8ed3d0;
+    --accent-ghost:#1a3536;
+    --good:#9be5c0;
+    --warn:#ffb3c1;
+    --line:#1f3235;
+    --digits:#bfeeed;
+  }
+
+  body[data-theme="studio"]{
+    --bg:#0f0f12;
+    --surface:#17171c;
+    --surface-2:#1f1f26;
+    --text:#f3f3f7;
+    --muted:#c2c2d0;
+    --accent:#7aa2ff;
+    --accent-strong:#9bb7ff;
+    --accent-ghost:#1b2233;
+    --good:#a4e5c0;
+    --warn:#ffb3c1;
+    --line:#242431;
+    --digits:#e2e7ff;
+  }
+
+  body[data-theme="minimal"]{
+    --bg:#141414;
+    --surface:#1b1b1b;
+    --surface-2:#242424;
+    --text:#f4f4f4;
+    --muted:#c2c2c2;
+    --accent:#d9d9d9;
+    --accent-strong:#f0f0f0;
+    --accent-ghost:#2f2f2f;
+    --good:#c6f7d2;
+    --warn:#ffd4dc;
+    --line:#2a2a2a;
+    --digits:#ffffff;
+  }
+
+  body[data-theme="contrast"]{
+    --bg:#000000;
+    --surface:#080808;
+    --surface-2:#121212;
+    --text:#ffffff;
+    --muted:#e0e0e0;
+    --accent:#ffe066;
+    --accent-strong:#fff1a6;
+    --accent-ghost:#2a2a2a;
+    --good:#b6ffcc;
+    --warn:#ff9fb1;
+    --line:#1f1f1f;
+    --digits:#ffffff;
   }
 
   .top{
@@ -87,13 +174,15 @@
 
   .label{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
   .name{
-    font-size:48px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+    font-size:48px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-family:var(--label-font);
   }
 
   .big{
     font-size:96px;margin-top:10px;letter-spacing:1px;
     color:var(--digits);
-    text-shadow:0 0 18px rgba(255,214,229,.25)
+    text-shadow:0 0 18px rgba(255,214,229,.25);
+    font-family:var(--timer-font);
   }
 
   .muted{color:var(--muted)}
@@ -191,6 +280,46 @@
     font-size:40px;
     top:40px;
   }
+
+  .speaker-animate{
+    animation:speakerPop .45s ease-out;
+  }
+  @keyframes speakerPop{
+    0%{transform:translateY(6px);opacity:.6}
+    100%{transform:translateY(0);opacity:1}
+  }
+
+  .session-ring{
+    width:56px;height:56px;display:inline-block;
+  }
+  .session-ring svg{width:100%;height:100%}
+  .session-ring circle{fill:none;stroke-width:6}
+  .session-ring .track{stroke:rgba(255,255,255,0.12)}
+  .session-ring .value{
+    stroke:var(--accent-strong);
+    stroke-linecap:round;
+    transform:rotate(-90deg);
+    transform-origin:50% 50%;
+    transition:stroke-dashoffset .2s ease-out;
+  }
+
+  .session-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:10px;
+    margin-bottom:8px;
+  }
+
+  .session-meta{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  .fullscreen-active .top{
+    opacity:.6;
+  }
   .banner.show{opacity:1;transform:translate(-50%,0)}
   .banner.warn{background:var(--warn-ghost); color:var(--warn); border-color:#7a2a3a}
 
@@ -215,14 +344,6 @@
     border-radius:8px;
     border:1px solid var(--accent-ghost);
     color:var(--text);
-  }
-
-  .session-header-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    gap:10px;
-    margin-bottom:8px;
   }
 
   .session-time{
@@ -272,6 +393,25 @@
     <button onclick="applyPreset(6)">6 speakers</button>
   </div>
 
+  <div style="display:flex;gap:6px;align-items:center">
+    <span class="muted" style="font-size:12px">Theme:</span>
+    <select id="themeSelect" style="background:var(--surface-2);color:var(--text);border-radius:10px;border:1px solid var(--accent-ghost);padding:6px 8px;font-size:13px">
+      <option value="studio">Studio</option>
+      <option value="calm">Calm</option>
+      <option value="minimal">Minimal</option>
+      <option value="contrast">High Contrast</option>
+    </select>
+  </div>
+
+  <div style="display:flex;gap:6px;align-items:center">
+    <span class="muted" style="font-size:12px">Chime:</span>
+    <select id="soundSelect" style="background:var(--surface-2);color:var(--text);border-radius:10px;border:1px solid var(--accent-ghost);padding:6px 8px;font-size:13px">
+      <option value="classic">Classic</option>
+      <option value="soft">Soft</option>
+      <option value="bright">Bright</option>
+    </select>
+  </div>
+
   <!-- New: Groups UI -->
   <div style="display:flex;flex-direction:column;gap:4px;min-width:220px;max-width:240px">
     <div style="display:flex;gap:6px;align-items:center">
@@ -310,6 +450,8 @@
     <button id="autoBtn" onclick="toggleAutoAdvance()" title="Toggle automatic next speaker">Auto-advance: On</button>
     <button id="presenterBtn" onclick="togglePresenterMode()" title="Minimal view for sharing">Presenter: Off</button>
     <button id="viewerBtn" onclick="toggleViewerMode()" title="Audience view">Viewer: Off</button>
+    <button id="viewerLinkBtn" onclick="copyViewerLink()" title="Copy viewer link for participants">Copy viewer link</button>
+    <button id="fullscreenBtn" onclick="toggleFullscreen()" title="Fullscreen">Fullscreen</button>
     <button onclick="exportCSV()" title="Export CSV">Export CSV</button>
     <button onclick="copySummary()" title="Copy text summary for notes">Copy Summary</button>
   </div>
@@ -330,8 +472,16 @@
         <div id="sessionTitleDisplay" class="label"></div>
         <div class="label">Now Speaking</div>
       </div>
-      <div class="session-time">
-        Session <span id="sessionTime">00:00</span>
+      <div class="session-meta">
+        <div class="session-ring" title="Session progress">
+          <svg viewBox="0 0 56 56" aria-hidden="true">
+            <circle class="track" cx="28" cy="28" r="22"></circle>
+            <circle id="sessionRingValue" class="value" cx="28" cy="28" r="22"></circle>
+          </svg>
+        </div>
+        <div class="session-time">
+          Session <span id="sessionTime">00:00</span>
+        </div>
       </div>
     </div>
 
@@ -339,10 +489,10 @@
     <div id="curTime" class="big">00:00</div>
     <div id="nextLine" class="muted" style="margin-top:8px">Next: —</div>
 
-  <div class="muted" id="preHint" style="margin-top:12px">
-    Edit minutes &amp; order below before starting.
-    <div class="subhint">Share this window in Zoom. For participants, send the same file with <span class="kbd">?view=1</span> in the URL for a clean audience view.</div>
-  </div>
+    <div class="muted" id="preHint" style="margin-top:12px">
+      Edit minutes &amp; order below before starting.
+      <div class="subhint">Share this window in Zoom. For participants, send the same file with <span class="kbd">?view=1</span> in the URL for a clean audience view.</div>
+    </div>
   </div>
 
   <div id="schedulePanel" class="panel">
