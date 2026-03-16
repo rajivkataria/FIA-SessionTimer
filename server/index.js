@@ -1,15 +1,20 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 const cors = require("cors");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../client")));
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+        origin: "*"
+    }
 });
 
 const rooms = {};
@@ -27,10 +32,30 @@ function createEmptyRoom() {
     };
 }
 
+function freezeCurrentSpeaker(room) {
+    if (!room.running) return;
+
+    const elapsed = Date.now() - room.startTimestamp;
+    const currentSpeaker = room.speakers[room.idx];
+
+    if (currentSpeaker) {
+        currentSpeaker.remainingMs = Math.max(
+            0,
+            currentSpeaker.remainingMs - elapsed
+        );
+    }
+
+    room.startTimestamp = null;
+    room.running = false;
+}
+
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
+    /* JOIN ROOM */
+
     socket.on("join_room", ({ roomId, name, role }) => {
+
         socket.join(roomId);
 
         if (!rooms[roomId]) {
@@ -42,59 +67,19 @@ io.on("connection", (socket) => {
             name,
             role
         };
+        const existingHost = Object.values(rooms[roomId].users)
+            .find(u => u.role === "host");
 
+        if (role === "host" && existingHost) {
+            role = "viewer";
+        }
         io.to(roomId).emit("state_update", rooms[roomId]);
     });
-    socket.on("start_timer", ({ roomId }) => {
-        const room = rooms[roomId];
-        if (!room) return;
 
-        const user = room.users[socket.id];
-        if (!user || user.role !== "host") return;
+    /* SET SPEAKERS */
 
-        if (room.running) return;
-        room.running = true;
-        room.startTimestamp = Date.now();
-
-        io.to(roomId).emit("state_update", room);
-    });
-
-    socket.on("pause_timer", ({ roomId }) => {
-        const room = rooms[roomId];
-        if (!room) return;
-
-        const user = room.users[socket.id];
-        if (!user || user.role !== "host") return;
-
-        if (room.running) {
-            const elapsed = Date.now() - room.startTimestamp;
-            const currentSpeaker = room.speakers[room.idx];
-
-            if (currentSpeaker) {
-                currentSpeaker.remainingMs = Math.max(
-                    0,
-                    currentSpeaker.remainingMs - elapsed
-                );
-            }
-
-            room.running = false;
-            room.startTimestamp = null;
-        }
-
-        io.to(roomId).emit("state_update", room);
-    });
-
-    socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
-
-        for (const roomId in rooms) {
-            if (rooms[roomId].users[socket.id]) {
-                delete rooms[roomId].users[socket.id];
-                io.to(roomId).emit("state_update", rooms[roomId]);
-            }
-        }
-    });
     socket.on("set_speakers", ({ roomId, speakers }) => {
+
         const room = rooms[roomId];
         if (!room) return;
 
@@ -110,16 +95,55 @@ io.on("connection", (socket) => {
 
         io.to(roomId).emit("state_update", room);
     });
-    socket.on("next_speaker", ({ roomId }) => {
+
+    /* START TIMER */
+
+    socket.on("start_timer", ({ roomId }) => {
+
         const room = rooms[roomId];
         if (!room) return;
 
         const user = room.users[socket.id];
         if (!user || user.role !== "host") return;
 
-        // If running, freeze current speaker time
+        if (room.running) return;
+
+        room.running = true;
+        room.startTimestamp = Date.now();
+
+        io.to(roomId).emit("state_update", room);
+    });
+
+    /* PAUSE TIMER */
+
+    socket.on("pause_timer", ({ roomId }) => {
+
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const user = room.users[socket.id];
+        if (!user || user.role !== "host") return;
+
+        freezeCurrentSpeaker(room);
+
+        io.to(roomId).emit("state_update", room);
+    });
+
+    /* NEXT SPEAKER */
+
+    socket.on("next_speaker", ({ roomId }) => {
+
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const user = room.users[socket.id];
+        if (!user || user.role !== "host") return;
+
+        if (!room.speakers.length) return;
+
         if (room.running) {
             const elapsed = Date.now() - room.startTimestamp;
+
             const currentSpeaker = room.speakers[room.idx];
 
             if (currentSpeaker) {
@@ -129,18 +153,20 @@ io.on("connection", (socket) => {
                 );
             }
         }
-        if (!room.speakers.length) return;
-        // Move to next speaker
+
         room.idx = (room.idx + 1) % room.speakers.length;
 
-        // Reset timer start if still running
         if (room.running) {
             room.startTimestamp = Date.now();
         }
 
         io.to(roomId).emit("state_update", room);
     });
+
+    /* GIFT TIME */
+
     socket.on("gift_time", ({ roomId, amountMs }) => {
+
         const room = rooms[roomId];
         if (!room) return;
 
@@ -152,16 +178,61 @@ io.on("connection", (socket) => {
         const currentSpeaker = room.speakers[room.idx];
         if (!currentSpeaker) return;
 
-        // Default gift = 60 seconds if not provided
         const giftAmount = amountMs || 60000;
 
         currentSpeaker.remainingMs += giftAmount;
 
         io.to(roomId).emit("state_update", room);
     });
+
+    /* RESET SESSION */
+
+    socket.on("reset_session", ({ roomId }) => {
+
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const user = room.users[socket.id];
+        if (!user || user.role !== "host") return;
+
+        rooms[roomId] = createEmptyRoom();
+
+        io.to(roomId).emit("state_update", rooms[roomId]);
+    });
+
+    /* SET SESSION TITLE */
+
+    socket.on("set_session_title", ({ roomId, title }) => {
+
+        const room = rooms[roomId];
+        if (!room) return;
+
+        room.sessionTitle = title;
+
+        io.to(roomId).emit("state_update", room);
+    });
+
+    /* DISCONNECT */
+
+    socket.on("disconnect", () => {
+
+        console.log("User disconnected:", socket.id);
+
+        for (const roomId in rooms) {
+
+            if (rooms[roomId].users[socket.id]) {
+
+                delete rooms[roomId].users[socket.id];
+
+                io.to(roomId).emit("state_update", rooms[roomId]);
+            }
+        }
+    });
+
 });
 
-/* ========== Start Server ========== */
+/* START SERVER */
+
 server.listen(5000, () => {
     console.log("Server running on port 5000");
 });

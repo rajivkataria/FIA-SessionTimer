@@ -12,6 +12,7 @@ socket.on("connect", () => {
         role: "host"
     });
 
+    
     // WAIT 1 SECOND → SET SPEAKERS
     setTimeout(() => {
         console.log("Setting speakers...");
