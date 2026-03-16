@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <title>Session Timer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <style>
+    :root {
+      --bg: #120f16;
+      --surface: #191625;
+      --surface-2: #221c33;
+      --text: #f7f2fa;
+      --muted: #cbbfd7;
+      --accent: #b583c6;
+      --accent-ghost: #2c2140;
+      --line: #2b2340;
+      --digits: #ffd6e5;
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 600 16px/1.45 system-ui;
+    }
+
+    .top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 520px 1fr;
+      gap: 22px;
+      padding: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--accent-ghost);
+      border-radius: 16px;
+      padding: 18px 20px;
+    }
+
+    .name {
+      font-size: 48px
+    }
+
+    .big {
+      font-size: 96px;
+      color: var(--digits)
+    }
+
+    button {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--accent-ghost);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #d0a6e6;
+      color: #2b1736;
+    }
+
+    .warn {
+      background: #ffb3c1;
+      color: #2d0f17;
+    }
+
+    body.viewer .top {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="top">
+
+    <button id="startBtn" class="primary" onclick="toggleStart()">Start</button>
+    <button onclick="nextSpeaker()">Next</button>
+    <button onclick="extendOne()">+1 min</button>
+    <button class="warn" onclick="resetAll()">Reset</button>
+
+  </div>
+
+  <div class="wrap">
+
+    <div class="panel">
+      <div>Now Speaking</div>
+      <div id="curName" class="name">—</div>
+      <div id="curTime" class="big">00:00</div>
+    </div>
+
+    <div class="panel">
+      <div>Speakers</div>
+      <table>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+
+    /* ---------- SOCKET CONNECTION ---------- */
+
+    const socket = io("http://localhost:5000");
+    const roomId = "room1";
+
+    let serverState = null;
+
+    setInterval(() => {
+
+      if (!serverState) return;
+
+      render();
+
+    }, 1000);
+
+    /* viewer mode */
+
+    const params = new URLSearchParams(window.location.search);
+    const viewerMode = params.get("view") === "1";
+
+    if (viewerMode) {
+      document.body.classList.add("viewer");
+    }
+
+    const role = viewerMode ? "viewer" : "host";
+
+    socket.emit("join_room", {
+      roomId,
+      name: viewerMode ? "Viewer" : "Host",
+      role
+    });
+
+    /* ---------- SERVER STATE ---------- */
+
+    socket.on("state_update", (state) => {
+
+      serverState = state;
+
+      startBtn.textContent = serverState.running ? "Pause" : "Start";
+
+      render();
+
+    });
+
+    /* ---------- RENDER UI ---------- */
+
+    function render() {
+
+      if (!serverState) return;
+
+      const speakers = serverState.speakers;
+
+      if (!speakers.length) {
+        curName.textContent = "—";
+        curTime.textContent = "00:00";
+        tbody.innerHTML = "";
+        return;
+      }
+
+      const current = speakers[serverState.idx];
+
+      curName.textContent = current.name;
+
+      let remaining = current.remainingMs;
+
+      if (serverState.running) {
+        const elapsed = Date.now() - serverState.startTimestamp;
+        remaining = current.remainingMs - elapsed;
+      }
+
+      remaining = Math.max(0, remaining);
+
+      const totalSec = Math.floor(remaining / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+
+      curTime.textContent =
+        String(m).padStart(2, "0") + ":" +
+        String(s).padStart(2, "0");
+
+      tbody.innerHTML = "";
+
+      speakers.forEach((sp, i) => {
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML =
+          "<td>" + (i + 1) + "</td>" +
+          "<td>" + sp.name + "</td>";
+
+        tbody.appendChild(tr);
+
+      });
+
+    }
+
+    /* ---------- BUTTON ACTIONS ---------- */
+
+    function toggleStart() {
+
+      if (!serverState) return;
+
+      if (serverState.running) {
+        socket.emit("pause_timer", { roomId });
+      } else {
+        socket.emit("start_timer", { roomId });
+      }
+
+    }
+
+    function nextSpeaker() {
+      socket.emit("next_speaker", { roomId });
+    }
+
+    function extendOne() {
+      socket.emit("gift_time", {
+        roomId,
+        amountMs: 60000
+      });
+    }
+
+    function resetAll() {
+      socket.emit("reset_session", { roomId });
+    }
+
+    /* ---------- TEST DATA ---------- */
+
+    setTimeout(() => {
+
+      socket.emit("set_speakers", {
+        roomId,
+        speakers: ["Alice", "Bob", "Charlie", "Dana"]
+      });
+
+    }, 500);
+
+  </script>
+
+</body>
+
+</html>
