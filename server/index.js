@@ -17,6 +17,26 @@ const io = new Server(server, {
     }
 });
 
+const { AccessToken } = require('livekit-server-sdk');
+
+app.get("/get-token", async (req, res) => {
+
+    const { room, username } = req.query;
+
+    const at = new AccessToken(
+        "APIxP5LaxVeW5SW",
+        "MSNoyoIcoOP9ArC0RUh9Bjab4OUJMKKPkZ4MGfTVbHB",
+        { identity: username }
+    );
+
+    at.addGrant({
+        roomJoin: true,
+        room: room
+    });
+    const token = await at.toJwt();
+    res.send({ token });
+});
+
 const rooms = {};
 
 function createEmptyRoom() {
