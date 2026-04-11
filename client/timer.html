@@ -12,216 +12,246 @@
       --text: #f7f2fa; --muted: #cbbfd7; --accent: #b583c6;
       --accent-ghost: #2c2140; --line: #2b2340; --digits: #ffd6e5;
     }
-    html, body { margin: 0; background: var(--bg); color: var(--text); font: 600 16px/1.45 system-ui; }
-    .top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-    .panel { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 16px; padding: 18px 20px; overflow: hidden; }
-    .name { font-size: 42px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .big { font-size: 96px; color: var(--digits); transition: color 0.3s; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 600 15px/1.45 system-ui; }
+
+    /* ---- MODALS ---- */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 20px; padding: 32px 28px; display: flex; flex-direction: column; gap: 14px; min-width: 320px; max-width: 420px; width: 100%; }
+    .modal-box h2 { margin: 0; font-size: 22px; }
+    .modal-box input[type="text"],
+    .modal-box input[type="number"] { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 15px; font-family: inherit; outline: none; width: 100%; }
+    .modal-box input:focus { border-color: var(--accent); }
+    .field-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: -6px; }
+    .hint { margin: 0; font-size: 13px; color: var(--muted); font-weight: 400; }
+    .room-tag { font-size: 13px; color: var(--muted); font-weight: 400; }
+    .room-tag strong { color: var(--accent); font-family: monospace; }
+
+    /* ---- BUTTONS ---- */
+    button { background: var(--surface-2); color: var(--text); border: 1px solid var(--accent-ghost); border-radius: 10px; padding: 9px 14px; cursor: pointer; font: inherit; font-size: 14px; }
+    button:hover { border-color: var(--accent); }
+    .primary { background: #d0a6e6; color: #2b1736; border-color: #c090da; }
+    .primary:hover { background: #dab8ee; }
+    .warn { background: #ffb3c1; color: #2d0f17; border-color: #f08090; }
+    .session-btn { min-width: 110px; }
+
+    /* ---- TOP BAR ---- */
+    .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); min-height: 52px; }
+    .session-title { font-size: 16px; font-weight: 700; color: var(--muted); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #hostControls { display: none; gap: 8px; align-items: center; }
+    .invite-btn { background: var(--accent-ghost); color: var(--accent); border-color: var(--accent-ghost); font-size: 13px; }
+    .invite-btn:hover { background: #3a2b54; }
+
+    /* ---- VIDEO GRID ---- */
+    #videoContainer { width: 100%; height: 60vh; display: grid; gap: 8px; padding: 10px; background: #000; box-sizing: border-box; }
+    .video-tile { position: relative; width: 100%; height: 100%; min-height: 0; background: #111; border-radius: 12px; overflow: hidden; transition: box-shadow 0.15s; display: flex; align-items: center; justify-content: center; }
+    .video-tile video { width: 100%; height: 100%; object-fit: contain; display: block; background: #111; }
+    .tile-label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; }
+    .tile-timer { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: var(--digits); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; font-variant-numeric: tabular-nums; }
+    .tile-timer.overtime { color: #ff6b6b; }
+    .video-tile.speaking { box-shadow: 0 0 0 3px #b583c6, 0 0 18px 4px rgba(181,131,198,0.4); }
+    .video-tile.overtime-tile { box-shadow: 0 0 0 3px #ff6b6b, 0 0 18px 4px rgba(255,107,107,0.4); }
+    .no-video-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--accent-ghost); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--accent); position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+    /* ---- DASHBOARD ---- */
+    .wrap { height: 35vh; display: grid; grid-template-columns: 480px 1fr; gap: 18px; padding: 14px 18px; box-sizing: border-box; }
+    .panel { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 16px; padding: 16px 18px; overflow: hidden; }
+    .panel-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .name { font-size: 38px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .big { font-size: 88px; color: var(--digits); transition: color 0.3s; font-variant-numeric: tabular-nums; line-height: 1; }
     .big.overtime { color: #ff6b6b; animation: flash 0.8s infinite alternate; }
     @keyframes flash { from { opacity: 1; } to { opacity: 0.4; } }
-    button { background: var(--surface-2); color: var(--text); border: 1px solid var(--accent-ghost); border-radius: 12px; padding: 10px 14px; cursor: pointer; }
-    .primary { background: #d0a6e6; color: #2b1736; }
-    .warn { background: #ffb3c1; color: #2d0f17; }
-    body.viewer .top { display: none; }
-
-    /* Modal */
-    #nameModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
-    #nameModal.open { display: flex; }
-    .modal-box { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 20px; padding: 32px 28px; display: flex; flex-direction: column; gap: 16px; min-width: 300px; }
-    .modal-box h2 { margin: 0; font-size: 22px; }
-    .modal-box input { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 16px; font-family: inherit; outline: none; }
-    .modal-box input:focus { border-color: var(--accent); }
-    .modal-box button { align-self: flex-end; }
-
-    /* Video */
-    #videoContainer { width: 100%; height: 60vh; display: grid; gap: 8px; padding: 10px; background: #000; box-sizing: border-box; grid-auto-rows: 1fr; align-items: stretch; }
-    .video-tile { position: relative; width: 100%; height: 100%; min-height: 0; background: #111; border-radius: 12px; overflow: hidden; transition: box-shadow 0.15s; }
-    .video-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .tile-label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; }
-    .tile-timer { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.55); color: #ffd6e5; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; }
-    .tile-timer.overtime { color: #ff6b6b; }
-    .video-tile.speaking { box-shadow: 0 0 0 3px #b583c6, 0 0 18px 4px rgba(181,131,198,0.45); }
-    .video-tile.overtime-tile { box-shadow: 0 0 0 3px #ff6b6b, 0 0 18px 4px rgba(255,107,107,0.45); }
-
-    /* Dashboard */
-    .wrap { height: 35vh; display: grid; grid-template-columns: 520px 1fr; gap: 22px; padding: 18px; box-sizing: border-box; }
-    .speakers-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: calc(35vh - 80px); }
+    .speakers-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: calc(35vh - 70px); }
     .speakers-list li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
     .speakers-list li.active-speaker { background: var(--accent-ghost); border: 1px solid var(--accent); }
     .speakers-list li .sp-name { flex: 1; }
     .speakers-list li .sp-time { font-size: 13px; color: var(--digits); font-variant-numeric: tabular-nums; }
     .speakers-list li .sp-time.overtime { color: #ff6b6b; }
-    .panel-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .sp-badge { font-size: 10px; padding: 2px 6px; border-radius: 5px; background: var(--accent-ghost); color: var(--accent); }
+
+    /* ---- SETUP MODAL SPECIFICS ---- */
+    .time-row { display: flex; align-items: center; gap: 10px; }
+    .time-row input { width: 90px; }
+    .time-row span { color: var(--muted); font-weight: 400; }
+    .speaker-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+    .speaker-tag { display: flex; align-items: center; gap: 6px; background: var(--accent-ghost); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+    .speaker-tag button { background: none; border: none; color: var(--muted); padding: 0; cursor: pointer; font-size: 14px; line-height: 1; }
+    .speaker-tag button:hover { color: #ff6b6b; }
+    .add-speaker-row { display: flex; gap: 8px; }
+    .add-speaker-row input { flex: 1; }
+    .setup-section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    @media (max-width: 700px) {
+      .wrap { grid-template-columns: 1fr; height: auto; }
+      .big { font-size: 60px; }
+    }
   </style>
 </head>
 <body>
-  <div id="nameModal">
+
+  <!-- JOIN MODAL -->
+  <div id="joinModal" class="modal-overlay open">
     <div class="modal-box">
       <h2>Join Session</h2>
-      <input id="nameInput" type="text" placeholder="Your name" maxlength="40" />
-      <button class="primary" id="joinBtn">Join</button>
+      <p id="roomTag" class="room-tag"></p>
+      <label class="field-label">Your Name</label>
+      <input id="nameInput" type="text" placeholder="Enter your name" maxlength="40" autocomplete="off" />
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;font-size:14px">
+        <input type="checkbox" id="observerCheck" />
+        <span>Join as observer (won't be timed)</span>
+      </label>
+      <button class="primary" id="joinBtn">Join with Camera</button>
     </div>
   </div>
 
-  <div id="videoContainer"></div>
+  <!-- SETUP MODAL (host) -->
+  <div id="setupModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>Session Setup</h2>
 
-  <div class="top">
-    <button onclick="startJoin()">Join Video</button>
-    <button id="sessionBtn" style="background:#7c3aed;color:#fff;border-color:#6d28d9" onclick="toggleSession()">&#9654; Start Session</button>
-    <button onclick="extendCurrent()">+1 min</button>
-    <button class="warn" onclick="resetAll()">Reset</button>
+      <label class="field-label">Session Title</label>
+      <input id="setupTitle" type="text" placeholder="e.g. Group Therapy — April 7" />
+
+      <label class="field-label">Time per participant</label>
+      <div class="time-row">
+        <input id="setupMinutes" type="number" min="1" max="120" value="5" />
+        <span>minutes each</span>
+      </div>
+
+      <p class="hint">Participants are added automatically when they join the room. You can also add them manually below.</p>
+
+      <label class="field-label">Add participants manually</label>
+      <div class="add-speaker-row">
+        <input id="addSpeakerInput" type="text" placeholder="Name" maxlength="40" />
+        <button id="addSpeakerBtn" onclick="addSpeakerFromSetup()">Add</button>
+      </div>
+      <div id="setupSpeakerTags" class="speaker-tags"></div>
+
+      <button class="primary" id="setupDoneBtn">Apply Settings</button>
+    </div>
   </div>
 
-  <div class="wrap">
-    <div class="panel">
-      <div class="panel-label">Now Speaking</div>
-      <div id="curName" class="name">&#8212;</div>
-      <div id="curTime" class="big">05:00</div>
+  <!-- MAIN APP -->
+  <div id="app">
+    <div class="top">
+      <span id="sessionTitleDisplay" class="session-title">Session</span>
+      <div id="hostControls" style="display:none;gap:8px;align-items:center">
+        <button id="sessionBtn" class="primary session-btn" onclick="toggleSession()">&#9654; Start</button>
+        <button onclick="giftTime()" title="Give active speaker +1 minute">+1 min</button>
+        <button class="warn" onclick="resetAll()" title="Reset all timers">Reset</button>
+        <button onclick="openSetup()" title="Session settings" style="padding:8px 11px;font-size:17px">&#9881;</button>
+      </div>
+      <button onclick="copyInvite()" class="invite-btn">&#128279; Copy Invite</button>
     </div>
-    <div class="panel">
-      <div class="panel-label">Speakers</div>
-      <ul class="speakers-list" id="speakersList"></ul>
+
+    <div id="videoContainer"></div>
+
+    <div class="wrap">
+      <div class="panel">
+        <div class="panel-label">Now Speaking</div>
+        <div id="curName" class="name">&#8212;</div>
+        <div id="curTime" class="big">&#8212;</div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Participants</div>
+        <ul id="speakersList" class="speakers-list"></ul>
+      </div>
     </div>
   </div>
 
   <script>
-    const videoContainer = document.getElementById("videoContainer");
-    const nameModal  = document.getElementById("nameModal");
-    const nameInput  = document.getElementById("nameInput");
-    const joinBtn    = document.getElementById("joinBtn");
-    const sessionBtn = document.getElementById("sessionBtn");
-    const curName    = document.getElementById("curName");
-    const curTime    = document.getElementById("curTime");
-    const speakersList = document.getElementById("speakersList");
-
-    /* ---- SOCKET ---- */
-    const socket = io("http://localhost:5000");
-    const roomId = "room1";
-
-    /* ---- SPEAKER REGISTRY ---- */
-    // name -> { remainingMs, totalMs }
-    const DEFAULT_MS = 5 * 60 * 1000;
-    const speakerTimes = new Map();
-    let activeSpeakerName = null;   // name of current speaker
-    let lastTickTime = null;        // timestamp of last VAD tick
-
-    function ensureSpeaker(name) {
-      if (!speakerTimes.has(name)) {
-        speakerTimes.set(name, { remainingMs: DEFAULT_MS, totalMs: DEFAULT_MS });
-        pushSpeakersToServer();
-      }
+    /* ------------------------------------------------------------------ */
+    /*  ROOM ID — from URL param, or generate one for the host             */
+    /* ------------------------------------------------------------------ */
+    const params = new URLSearchParams(window.location.search);
+    let roomId = params.get("room");
+    if (!roomId) {
+      roomId = Math.random().toString(36).slice(2, 8).toUpperCase();
+      const newUrl = window.location.pathname + "?room=" + roomId;
+      window.history.replaceState({}, "", newUrl);
     }
 
-    function removeSpeaker(name) {
-      speakerTimes.delete(name);
-      if (activeSpeakerName === name) { activeSpeakerName = null; lastTickTime = null; }
-      pushSpeakersToServer();
-      renderDashboard();
-    }
+    document.getElementById("roomTag").innerHTML =
+      "Room: <strong>" + roomId + "</strong>";
 
-    function pushSpeakersToServer() {
-      // Keep server in sync so it knows speaker order
-      socket.emit("set_speakers", { roomId, speakers: [...speakerTimes.keys()] });
-    }
-
-    /* ---- TILES ---- */
-    const tiles = new Map(); // identity -> { wrapper, labelEl, timerEl, analyser, name }
+    /* ------------------------------------------------------------------ */
+    /*  STATE                                                               */
+    /* ------------------------------------------------------------------ */
+    let myName = null;
+    let myRole = null;       // "host" | "participant" | "observer"
+    let serverState = null;
+    let lkRoom = null;
+    const tiles = new Map();  // identity -> { wrapper, labelEl, timerEl, analyser, name }
     let audioCtx = null;
+    let vadInterval = null;
 
-    function getAudioCtx() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      return audioCtx;
-    }
+    const THRESHOLD = 0.015;
 
-    function createTile(identity, displayName) {
-      if (tiles.has(identity)) return tiles.get(identity).wrapper;
-      const wrapper = document.createElement("div");
-      wrapper.className = "video-tile";
-      const label = document.createElement("div");
-      label.className = "tile-label";
-      label.textContent = displayName;
-      const timerEl = document.createElement("div");
-      timerEl.className = "tile-timer";
-      timerEl.textContent = "5:00";
-      wrapper.appendChild(timerEl);
-      wrapper.appendChild(label);
-      tiles.set(identity, { wrapper, labelEl: label, timerEl, analyser: null, name: displayName });
-      videoContainer.appendChild(wrapper);
-      updateVideoLayout();
-      return wrapper;
-    }
+    /* ------------------------------------------------------------------ */
+    /*  SOCKET                                                              */
+    /* ------------------------------------------------------------------ */
+    const socket = io("http://localhost:5000");
 
-    function putVideoInTile(identity, videoEl) {
-      const t = tiles.get(identity);
-      if (!t || t.wrapper.querySelector("video")) return;
-      t.wrapper.insertBefore(videoEl, t.wrapper.querySelector(".tile-timer"));
-    }
+    socket.on("your_info", ({ role }) => {
+      myRole = role;
+      if (role === "host") {
+        document.getElementById("hostControls").style.display = "flex";
+        // Show setup modal for host on first join
+        openSetup();
+      }
+    });
 
-    function hookAnalyserToStream(identity, stream) {
-      const t = tiles.get(identity);
-      if (!t || t.analyser) return;
-      try {
-        const ctx = getAudioCtx();
-        const src = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.6;
-        src.connect(analyser);
-        t.analyser = analyser;
-      } catch(e) { console.warn("analyser failed", e); }
-    }
+    socket.on("state_update", (state) => {
+      serverState = state;
+      renderState(state);
+    });
 
-    function hookAnalyserToLKTrack(identity, lkTrack) {
-      try { hookAnalyserToStream(identity, new MediaStream([lkTrack.mediaStreamTrack])); }
-      catch(e) { console.warn("lk analyser failed", e); }
-    }
-
-    function getRMS(analyser) {
-      if (!analyser) return 0;
-      const buf = new Uint8Array(analyser.fftSize);
-      analyser.getByteTimeDomainData(buf);
-      let sum = 0;
-      for (let i = 0; i < buf.length; i++) { const v = (buf[i]-128)/128; sum += v*v; }
-      return Math.sqrt(sum / buf.length);
-    }
-
-    /* ---- MODAL ---- */
-    function startJoin() {
-      nameInput.value = "";
-      nameModal.classList.add("open");
-      setTimeout(() => nameInput.focus(), 50);
-    }
+    /* ------------------------------------------------------------------ */
+    /*  JOIN MODAL                                                          */
+    /* ------------------------------------------------------------------ */
+    const joinBtn = document.getElementById("joinBtn");
+    const nameInput = document.getElementById("nameInput");
 
     joinBtn.addEventListener("click", async () => {
       const name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
+
       joinBtn.disabled = true;
-      joinBtn.textContent = "Getting camera...";
+      joinBtn.textContent = "Getting camera…";
+
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } catch(e) {
-        alert("Camera/mic denied: " + e.message);
-        joinBtn.disabled = false; joinBtn.textContent = "Join"; return;
+      } catch (e) {
+        alert("Camera/mic error: " + e.message);
+        joinBtn.disabled = false; joinBtn.textContent = "Join with Camera";
+        return;
       }
-      nameModal.classList.remove("open");
-      joinBtn.disabled = false; joinBtn.textContent = "Join";
-      continueJoin(name, stream);
+
+      const isObserver = document.getElementById("observerCheck").checked;
+      myName = name;
+
+      document.getElementById("joinModal").classList.remove("open");
+      joinBtn.disabled = false; joinBtn.textContent = "Join with Camera";
+
+      await continueJoin(name, stream, isObserver);
     });
 
-    nameInput.addEventListener("keydown", e => { if (e.key === "Enter") joinBtn.click(); });
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinBtn.click(); });
 
-    /* ---- JOIN ---- */
-    async function continueJoin(username, localStream) {
-      videoContainer.innerHTML = "";
+    /* ------------------------------------------------------------------ */
+    /*  JOIN FLOW                                                           */
+    /* ------------------------------------------------------------------ */
+    async function continueJoin(username, localStream, isObserver) {
+      // Clear existing tiles
+      document.getElementById("videoContainer").innerHTML = "";
       tiles.clear();
-      speakerTimes.clear();
 
-      // Local tile — show immediately
+      // Local tile
       const LOCAL_ID = "__local__";
-      const cleanName = username.replace(" (you)", "");
-      createTile(LOCAL_ID, username + " (you)");
-      ensureSpeaker(cleanName);
+      const cleanName = username;
+      createTile(LOCAL_ID, username + " (you)", cleanName);
 
       const selfVid = document.createElement("video");
       selfVid.srcObject = localStream;
@@ -229,226 +259,366 @@
       putVideoInTile(LOCAL_ID, selfVid);
       hookAnalyserToStream(LOCAL_ID, localStream);
 
-      // Update tile map name for VAD lookup
-      const lt = tiles.get(LOCAL_ID);
-      if (lt) lt.name = cleanName;
+      // Join room via socket
+      const role = isObserver ? "observer" : "host"; // server downgrades to participant if host taken
+      socket.emit("join_room", { roomId, name: cleanName, role });
 
-      // LiveKit
+      // Get LiveKit token and connect
       let data;
       try {
-        const res = await fetch("/get-token?room=" + roomId + "&username=" + encodeURIComponent(username));
+        const res = await fetch("/get-token?room=" + encodeURIComponent(roomId) + "&username=" + encodeURIComponent(username));
         if (!res.ok) throw new Error("HTTP " + res.status);
         data = await res.json();
-      } catch(e) { alert("Token error: " + e.message); return; }
+      } catch (e) { alert("Token error: " + e.message); return; }
 
-      const room = new LivekitClient.Room();
+      lkRoom = new LivekitClient.Room();
+
       try {
-        await room.connect("wss://therapyapp-4n3fl2as.livekit.cloud", data.token);
-        console.log("Connected as", username);
-      } catch(e) { alert("LiveKit error: " + e.message); return; }
+        await lkRoom.connect("wss://therapyapp-4n3fl2as.livekit.cloud", data.token);
+      } catch (e) { alert("LiveKit connection error: " + e.message); return; }
 
       try {
         const vt = localStream.getVideoTracks()[0];
         const at = localStream.getAudioTracks()[0];
-        if (vt) await room.localParticipant.publishTrack(vt);
-        if (at) await room.localParticipant.publishTrack(at);
-      } catch(e) { console.warn("publish failed", e); }
+        if (vt) await lkRoom.localParticipant.publishTrack(vt);
+        if (at) await lkRoom.localParticipant.publishTrack(at);
+      } catch (e) { console.warn("publish failed", e); }
 
-      // Already-present remote participants
-      room.remoteParticipants.forEach(participant => {
+      // Handle already-present participants
+      lkRoom.remoteParticipants.forEach((participant) => {
         const id = participant.identity;
         const pName = participant.name || id;
-        createTile(id, pName);
-        const rt = tiles.get(id);
-        if (rt) rt.name = pName;
-        ensureSpeaker(pName);
-        participant.trackPublications.forEach(pub => {
+        createTile(id, pName, pName);
+        participant.trackPublications.forEach((pub) => {
           if (!pub.isSubscribed || !pub.track) return;
           if (pub.kind === "video") putVideoInTile(id, pub.track.attach());
           if (pub.kind === "audio") hookAnalyserToLKTrack(id, pub.track);
         });
       });
 
-      // New remote track
-      room.on("trackSubscribed", (track, _pub, participant) => {
+      // New remote track subscribed
+      lkRoom.on("trackSubscribed", (track, _pub, participant) => {
         const id = participant.identity;
         const pName = participant.name || id;
-        createTile(id, pName);
-        const rt = tiles.get(id);
-        if (rt) rt.name = pName;
-        ensureSpeaker(pName);
+        createTile(id, pName, pName);
         if (track.kind === "video") putVideoInTile(id, track.attach());
         if (track.kind === "audio") hookAnalyserToLKTrack(id, track);
-        renderDashboard();
       });
 
-      // Participant leaves
-      room.on("participantDisconnected", participant => {
+      // Participant leaves LiveKit
+      lkRoom.on("participantDisconnected", (participant) => {
         const id = participant.identity;
         const t = tiles.get(id);
         if (t) {
-          removeSpeaker(t.name);
           t.wrapper.remove();
           tiles.delete(id);
           updateVideoLayout();
         }
       });
 
-      renderDashboard();
+      // Start sending VAD reports to server
+      startVadReporting();
     }
 
-    /* ---- LAYOUT ---- */
+    /* ------------------------------------------------------------------ */
+    /*  TILES                                                               */
+    /* ------------------------------------------------------------------ */
+    function createTile(identity, displayLabel, canonicalName) {
+      if (tiles.has(identity)) return tiles.get(identity).wrapper;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "video-tile";
+
+      const avatar = document.createElement("div");
+      avatar.className = "no-video-avatar";
+      avatar.textContent = (canonicalName || displayLabel).charAt(0).toUpperCase();
+
+      const timerEl = document.createElement("div");
+      timerEl.className = "tile-timer";
+      timerEl.textContent = "";
+
+      const label = document.createElement("div");
+      label.className = "tile-label";
+      label.textContent = displayLabel;
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(timerEl);
+      wrapper.appendChild(label);
+
+      tiles.set(identity, { wrapper, labelEl: label, timerEl, avatarEl: avatar, analyser: null, name: canonicalName || displayLabel });
+      document.getElementById("videoContainer").appendChild(wrapper);
+      updateVideoLayout();
+      return wrapper;
+    }
+
+    function putVideoInTile(identity, videoEl) {
+      const t = tiles.get(identity);
+      if (!t || t.wrapper.querySelector("video")) return;
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      // Insert before timerEl so video is behind overlays
+      t.wrapper.insertBefore(videoEl, t.timerEl);
+    }
+
+    function hookAnalyserToStream(identity, stream) {
+      const t = tiles.get(identity);
+      if (!t || t.analyser) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.6;
+        src.connect(analyser);
+        t.analyser = analyser;
+      } catch (e) { console.warn("analyser failed", e); }
+    }
+
+    function hookAnalyserToLKTrack(identity, lkTrack) {
+      try { hookAnalyserToStream(identity, new MediaStream([lkTrack.mediaStreamTrack])); }
+      catch (e) { console.warn("lk analyser failed", e); }
+    }
+
+    function getRMS(analyser) {
+      if (!analyser) return 0;
+      const buf = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+      return Math.sqrt(sum / buf.length);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  LAYOUT                                                              */
+    /* ------------------------------------------------------------------ */
     function updateVideoLayout() {
-      const count = videoContainer.children.length;
+      const count = document.getElementById("videoContainer").children.length;
       if (count === 0) return;
       const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
-      videoContainer.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
-      videoContainer.style.gridTemplateRows = "repeat(" + Math.ceil(count/cols) + ", 1fr)";
+      const rows = Math.ceil(count / cols);
+      const vc = document.getElementById("videoContainer");
+      vc.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
+      vc.style.gridTemplateRows = "repeat(" + rows + ", 1fr)";
     }
 
-    /* ---- VAD + TIMER ---- */
-    const THRESHOLD = 0.015;
-    const GRACE_MS  = 2500;
-    let sessionActive = false, vadInterval = null, silenceTimer = null;
+    /* ------------------------------------------------------------------ */
+    /*  VAD REPORTING — send to server, server owns the timer              */
+    /* ------------------------------------------------------------------ */
+    function startVadReporting() {
+      if (vadInterval) return;
+      vadInterval = setInterval(() => {
+        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 
-    function toggleSession() {
-      if (!sessionActive) {
-        if (audioCtx) audioCtx.resume();
-        lastTickTime = null;
-        vadInterval = setInterval(vadTick, 100);
-        sessionBtn.innerHTML = "&#9646;&#9646; Stop Session";
-        sessionBtn.style.background = "#be123c";
-        sessionBtn.style.borderColor = "#9f1239";
-      } else {
-        clearInterval(vadInterval); clearTimeout(silenceTimer);
-        vadInterval = silenceTimer = null;
-        activeSpeakerName = null; lastTickTime = null;
-        tiles.forEach(t => { t.wrapper.classList.remove("speaking", "overtime-tile"); });
-        sessionBtn.innerHTML = "&#9654; Start Session";
-        sessionBtn.style.background = "#7c3aed";
-        sessionBtn.style.borderColor = "#6d28d9";
-      }
-      sessionActive = !sessionActive;
+        let loudId = null, loudRMS = THRESHOLD;
+        tiles.forEach((t, id) => {
+          const rms = getRMS(t.analyser);
+          if (rms > loudRMS) { loudRMS = rms; loudId = id; }
+        });
+
+        const speakerName = loudId ? tiles.get(loudId)?.name : null;
+        socket.emit("vad_report", { roomId, speakerName: speakerName || null });
+      }, 200);
     }
 
-    function vadTick() {
-      let loudId = null, loudRMS = THRESHOLD;
-      tiles.forEach((t, id) => {
-        const rms = getRMS(t.analyser);
-        if (rms > loudRMS) { loudRMS = rms; loudId = id; }
-      });
+    /* ------------------------------------------------------------------ */
+    /*  RENDER FROM SERVER STATE                                            */
+    /* ------------------------------------------------------------------ */
+    function renderState(state) {
+      // Session title
+      document.getElementById("sessionTitleDisplay").textContent = state.sessionTitle || "Session";
 
-      const now = Date.now();
-
-      if (loudId) {
-        clearTimeout(silenceTimer); silenceTimer = null;
-        const t = tiles.get(loudId);
-        const spName = t ? t.name : null;
-
-        // Deduct time from whoever was speaking since last tick
-        if (activeSpeakerName && lastTickTime) {
-          const elapsed = now - lastTickTime;
-          const sp = speakerTimes.get(activeSpeakerName);
-          if (sp) {
-            sp.remainingMs = Math.max(-60000, sp.remainingMs - elapsed); // allow 1 min overtime
-          }
-        }
-        lastTickTime = now;
-
-        // Switch active speaker if changed
-        if (spName && spName !== activeSpeakerName) {
-          activeSpeakerName = spName;
-        }
+      // Session button
+      const btn = document.getElementById("sessionBtn");
+      if (state.sessionActive) {
+        btn.innerHTML = "&#9646;&#9646; Pause";
+        btn.style.background = "#be123c";
+        btn.style.borderColor = "#9f1239";
+        btn.style.color = "#fff";
       } else {
-        // Silence — deduct from last speaker until grace period expires
-        if (activeSpeakerName && lastTickTime && !silenceTimer) {
-          silenceTimer = setTimeout(() => {
-            activeSpeakerName = null; lastTickTime = null; silenceTimer = null;
-            renderDashboard();
-          }, GRACE_MS);
-        }
-        // Still deduct during grace period
-        if (activeSpeakerName && lastTickTime) {
-          const elapsed = now - lastTickTime;
-          const sp = speakerTimes.get(activeSpeakerName);
-          if (sp) sp.remainingMs = Math.max(-60000, sp.remainingMs - elapsed);
-          lastTickTime = now;
-        }
+        btn.innerHTML = "&#9654; Start";
+        btn.style.background = "";
+        btn.style.borderColor = "";
+        btn.style.color = "";
+        btn.classList.add("primary");
       }
 
-      // Update tile visuals
+      // Update tile timer badges + speaking highlight
       tiles.forEach((t, id) => {
-        const rms = getRMS(t.analyser);
-        const isActive = t.name === activeSpeakerName;
-        const isSpeaking = rms > THRESHOLD;
+        const sp = state.speakers.find((s) => s.name === t.name);
+        const isActive = state.activeSpeaker && t.name === state.activeSpeaker;
+        const isSpeaking = isActive && state.sessionActive;
+
         t.wrapper.classList.toggle("speaking", isSpeaking);
 
-        // Update per-tile timer badge
-        const sp = speakerTimes.get(t.name);
-        if (sp) {
-          const rem = sp.remainingMs;
-          const isOT = rem < 0;
-          const absSec = Math.floor(Math.abs(rem) / 1000);
-          t.timerEl.textContent = (isOT ? "-" : "") + String(Math.floor(absSec/60)).padStart(2,"0") + ":" + String(absSec%60).padStart(2,"0");
-          t.timerEl.classList.toggle("overtime", isOT);
-          t.wrapper.classList.toggle("overtime-tile", isOT && isActive);
-        }
-      });
-
-      renderDashboard();
-    }
-
-    /* ---- DASHBOARD ---- */
-    function renderDashboard() {
-      speakersList.innerHTML = "";
-      speakerTimes.forEach((sp, name) => {
-        const isOT = sp.remainingMs < 0;
-        const absSec = Math.floor(Math.abs(sp.remainingMs) / 1000);
-        const timeStr = (isOT ? "-" : "") + String(Math.floor(absSec/60)).padStart(2,"0") + ":" + String(absSec%60).padStart(2,"0");
-        const li = document.createElement("li");
-        if (name === activeSpeakerName) li.classList.add("active-speaker");
-        li.innerHTML = '<span class="sp-name">' + name + '</span><span class="sp-time' + (isOT ? " overtime" : "") + '">' + timeStr + '</span>';
-        speakersList.appendChild(li);
-      });
-
-      // Big display — show active speaker or first speaker
-      const displayName = activeSpeakerName || [...speakerTimes.keys()][0] || null;
-      if (displayName) {
-        curName.textContent = displayName;
-        const sp = speakerTimes.get(displayName);
         if (sp) {
           const isOT = sp.remainingMs < 0;
-          const absSec = Math.floor(Math.abs(sp.remainingMs) / 1000);
-          curTime.textContent = (isOT ? "-" : "") + String(Math.floor(absSec/60)).padStart(2,"0") + ":" + String(absSec%60).padStart(2,"0");
-          curTime.classList.toggle("overtime", isOT);
+          t.timerEl.textContent = formatTime(sp.remainingMs);
+          t.timerEl.classList.toggle("overtime", isOT);
+          t.wrapper.classList.toggle("overtime-tile", isOT && isSpeaking);
+        } else {
+          t.timerEl.textContent = "";
         }
+      });
+
+      // Dashboard
+      renderDashboard(state);
+
+      // Setup speaker tags if setup modal is open
+      renderSetupTags(state.speakers);
+    }
+
+    function renderDashboard(state) {
+      const list = document.getElementById("speakersList");
+      list.innerHTML = "";
+
+      state.speakers.forEach((sp) => {
+        const isActive = sp.name === state.activeSpeaker;
+        const isOT = sp.remainingMs < 0;
+        const li = document.createElement("li");
+        if (isActive) li.classList.add("active-speaker");
+        li.innerHTML =
+          '<span class="sp-name">' + escHtml(sp.name) + '</span>' +
+          '<span class="sp-time' + (isOT ? " overtime" : "") + '">' + formatTime(sp.remainingMs) + '</span>';
+        list.appendChild(li);
+      });
+
+      const activeSp = state.speakers.find((s) => s.name === state.activeSpeaker);
+      const displaySp = activeSp || state.speakers[0] || null;
+
+      if (displaySp) {
+        document.getElementById("curName").textContent = displaySp.name;
+        document.getElementById("curTime").textContent = formatTime(displaySp.remainingMs);
+        document.getElementById("curTime").classList.toggle("overtime", displaySp.remainingMs < 0);
       } else {
-        curName.textContent = "\u2014";
-        curTime.textContent = "05:00";
-        curTime.classList.remove("overtime");
+        document.getElementById("curName").innerHTML = "&#8212;";
+        document.getElementById("curTime").innerHTML = state.sessionActive ? "&#8212;" : "&#8212;";
+        document.getElementById("curTime").classList.remove("overtime");
       }
     }
 
-    /* ---- CONTROLS ---- */
-    function extendCurrent() {
-      if (!activeSpeakerName) return;
-      const sp = speakerTimes.get(activeSpeakerName);
-      if (sp) { sp.remainingMs += 60000; renderDashboard(); }
+    /* ------------------------------------------------------------------ */
+    /*  HOST CONTROLS                                                       */
+    /* ------------------------------------------------------------------ */
+    function toggleSession() {
+      if (!serverState) return;
+      if (serverState.sessionActive) {
+        socket.emit("stop_session", { roomId });
+      } else {
+        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+        socket.emit("start_session", { roomId });
+      }
+    }
+
+    function giftTime() {
+      socket.emit("gift_time", { roomId, amountMs: 60000 });
     }
 
     function resetAll() {
-      speakerTimes.forEach((sp, name) => { sp.remainingMs = sp.totalMs; });
-      activeSpeakerName = null; lastTickTime = null;
-      renderDashboard();
+      if (!confirm("Reset all speaker times? This cannot be undone.")) return;
+      socket.emit("reset_session", { roomId });
     }
 
-    /* ---- VIEWER MODE ---- */
-    const params = new URLSearchParams(window.location.search);
-    const viewerMode = params.get("view") === "1";
-    if (viewerMode) document.body.classList.add("viewer");
-    if (viewerMode) setTimeout(startJoin, 500);
+    /* ------------------------------------------------------------------ */
+    /*  SETUP MODAL                                                         */
+    /* ------------------------------------------------------------------ */
+    let pendingSpeakerRemovals = new Set();
 
-    socket.emit("join_room", { roomId, name: viewerMode ? "Viewer" : "Host", role: viewerMode ? "viewer" : "host" });
+    function openSetup() {
+      const modal = document.getElementById("setupModal");
+      modal.classList.add("open");
+      // Pre-fill from server state if available
+      if (serverState) {
+        document.getElementById("setupTitle").value = serverState.sessionTitle || "";
+        const mins = Math.round(serverState.config.timePerSpeakerMs / 60000);
+        document.getElementById("setupMinutes").value = mins || 5;
+      }
+      pendingSpeakerRemovals.clear();
+      renderSetupTags(serverState ? serverState.speakers : []);
+    }
+
+    function renderSetupTags(speakers) {
+      const container = document.getElementById("setupSpeakerTags");
+      if (!document.getElementById("setupModal").classList.contains("open")) return;
+      container.innerHTML = "";
+      (speakers || []).forEach((sp) => {
+        const tag = document.createElement("div");
+        tag.className = "speaker-tag";
+        tag.innerHTML =
+          '<span>' + escHtml(sp.name) + '</span>' +
+          '<button title="Remove" onclick="removeSpeakerTag(\'' + escAttr(sp.name) + '\')">&#215;</button>';
+        container.appendChild(tag);
+      });
+    }
+
+    function removeSpeakerTag(name) {
+      socket.emit("remove_speaker", { roomId, name });
+    }
+
+    function addSpeakerFromSetup() {
+      const input = document.getElementById("addSpeakerInput");
+      const name = input.value.trim();
+      if (!name) return;
+      socket.emit("add_speaker", { roomId, name });
+      input.value = "";
+    }
+
+    document.getElementById("addSpeakerInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addSpeakerFromSetup();
+    });
+
+    document.getElementById("setupDoneBtn").addEventListener("click", () => {
+      const title = document.getElementById("setupTitle").value.trim();
+      const mins = parseFloat(document.getElementById("setupMinutes").value) || 5;
+      socket.emit("configure_session", {
+        roomId,
+        config: {
+          sessionTitle: title,
+          timePerSpeakerMs: Math.round(mins * 60 * 1000),
+        },
+      });
+      document.getElementById("setupModal").classList.remove("open");
+    });
+
+    // Close setup modal on backdrop click
+    document.getElementById("setupModal").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("setupModal")) {
+        document.getElementById("setupModal").classList.remove("open");
+      }
+    });
+
+    /* ------------------------------------------------------------------ */
+    /*  INVITE LINK                                                         */
+    /* ------------------------------------------------------------------ */
+    function copyInvite() {
+      const url = window.location.origin + window.location.pathname + "?room=" + roomId;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.querySelector(".invite-btn");
+        const orig = btn.innerHTML;
+        btn.innerHTML = "&#10003; Copied!";
+        btn.style.color = "#7ee787";
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; }, 2000);
+      }).catch(() => prompt("Copy this link:", url));
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  UTILS                                                               */
+    /* ------------------------------------------------------------------ */
+    function formatTime(ms) {
+      const isOT = ms < 0;
+      const abs = Math.abs(ms);
+      const s = Math.floor(abs / 1000);
+      return (isOT ? "-" : "") +
+        String(Math.floor(s / 60)).padStart(2, "0") + ":" +
+        String(s % 60).padStart(2, "0");
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function escAttr(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
   </script>
 </body>
 </html>

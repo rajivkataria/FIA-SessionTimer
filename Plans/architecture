@@ -1,0 +1,15 @@
+session-timer-app/
+├── src/
+│   ├── components/
+│   │   ├── Timer.jsx           // ← SessionTimer.html logic goes here
+│   │   ├── Overlay.jsx         // ← overlay.html goes here
+│   │   ├── WaitingRoom.jsx     // ← NEW: participant list
+│   │   └── RoomControls.jsx    // ← NEW: start/pause/next buttons
+│   ├── hooks/
+│   │   ├── useTimer.js         // ← Timer logic extracted
+│   │   └── useFirebaseSync.js  // ← Real-time sync
+│   ├── firebase/
+│   │   └── config.js           // ← Firebase setup
+│   └── App.jsx
+├── firebase.json
+└── package.json
