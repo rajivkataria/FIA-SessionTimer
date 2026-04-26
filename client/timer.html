@@ -2,191 +2,1003 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
-  <title>Session Timer</title>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <title>Therapy Session</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
     :root {
-      --bg: #120f16; --surface: #191625; --surface-2: #221c33;
-      --text: #f7f2fa; --muted: #cbbfd7; --accent: #b583c6;
-      --accent-ghost: #2c2140; --line: #2b2340; --digits: #ffd6e5;
+      /* Cool blue-grey — clinical authority, not cold */
+      --bg:            #EEF2F7;
+      --surface:       #FFFFFF;
+      --surface-2:     #F7FAFC;
+      --surface-3:     #EDF1F7;
+
+      --text:          #0D1B2A;
+      --text-2:        #2C3E50;
+      --muted:         #64748B;
+      --muted-2:       #94A3B8;
+
+      /* Primary — deep teal, calm authority */
+      --teal:          #0AA696;
+      --teal-dark:     #088A7C;
+      --teal-light:    #14BDA9;
+      --teal-ghost:    #E8FAF8;
+      --teal-shadow:   rgba(10,166,150,0.22);
+
+      /* Signal — rose, warm alert */
+      --coral:         #D64966;
+      --coral-dark:    #B73858;
+      --coral-ghost:   #FDF0F3;
+      --coral-shadow:  rgba(214,73,102,0.22);
+
+      --orange:        #D97706;
+      --orange-dark:   #B45309;
+      --orange-ghost:  #FFFBEB;
+      --orange-shadow: rgba(217,119,6,0.22);
+
+      --purple:        #7C5CBF;
+      --purple-ghost:  #F3EEFF;
+
+      --border:        #E1E8F0;
+      --border-strong: #C8D5E0;
+
+      --video-bg:      #000000;
+      --tile-bg:       #0D1117;
+
+      --sh-xs: 0 1px 3px rgba(13,27,42,.05);
+      --sh-sm: 0 2px 8px rgba(13,27,42,.07), 0 1px 3px rgba(13,27,42,.04);
+      --sh-md: 0 4px 16px rgba(13,27,42,.09), 0 2px 6px rgba(13,27,42,.05);
+      --sh-lg: 0 8px 28px rgba(13,27,42,.11), 0 3px 8px rgba(13,27,42,.05);
+      --sh-xl: 0 16px 48px rgba(13,27,42,.13), 0 6px 14px rgba(13,27,42,.06);
+
+      --radius-s:  8px;
+      --radius:    12px;
+      --radius-l:  16px;
+      --radius-xl: 20px;
     }
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 600 15px/1.45 system-ui; }
 
-    /* ---- MODALS ---- */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    svg { display: block; flex-shrink: 0; }
+
+    /* ============================================================
+       BUTTONS — precise, professional, controlled
+    ============================================================ */
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 9px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font: 600 13px/1 'Inter', system-ui;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease, color .15s ease,
+                  box-shadow .15s ease, transform .15s ease;
+      box-shadow: var(--sh-xs);
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--surface-2);
+      border-color: var(--border-strong);
+      box-shadow: var(--sh-md);
+    }
+    button:active:not(:disabled) {
+      transform: translateY(0) scale(.97);
+      transition-duration: .08s;
+    }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Primary — teal, calm authority */
+    .btn-primary {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal);
+      box-shadow: 0 3px 10px var(--teal-shadow), var(--sh-xs);
+      font-weight: 700;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--teal-dark);
+      border-color: var(--teal-dark);
+      color: #fff;
+      box-shadow: 0 6px 20px var(--teal-shadow);
+    }
+
+    /* Teal action */
+    .btn-teal {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal);
+      box-shadow: 0 3px 10px var(--teal-shadow), var(--sh-xs);
+      font-weight: 700;
+    }
+    .btn-teal:hover:not(:disabled) {
+      background: var(--teal-dark);
+      border-color: var(--teal-dark);
+      color: #fff;
+      box-shadow: 0 6px 20px var(--teal-shadow);
+    }
+
+    .btn-danger {
+      background: var(--coral-ghost);
+      color: var(--coral);
+      border-color: rgba(214,73,102,.3);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: var(--coral);
+      color: #fff;
+      border-color: var(--coral);
+      box-shadow: 0 4px 14px var(--coral-shadow);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+      box-shadow: none;
+      color: var(--muted);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface-3);
+      border-color: var(--border-strong);
+      color: var(--text-2);
+      transform: translateY(-1px);
+    }
+
+    .btn-icon {
+      width: 38px; height: 38px;
+      padding: 0;
+      border-radius: 9px;
+    }
+    .btn-icon:hover:not(:disabled) { transform: translateY(-1px) scale(1.04); }
+
+    .btn-teal-ghost {
+      background: var(--teal-ghost);
+      color: var(--teal-dark);
+      border-color: rgba(10,166,150,.3);
+    }
+    .btn-teal-ghost:hover:not(:disabled) {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal);
+      box-shadow: 0 4px 14px var(--teal-shadow);
+    }
+
+    .btn-orange-ghost {
+      background: var(--orange-ghost);
+      color: var(--orange-dark);
+      border-color: rgba(217,119,6,.3);
+    }
+    .btn-orange-ghost:hover:not(:disabled) {
+      background: var(--orange);
+      color: #fff;
+      border-color: var(--orange);
+    }
+
+    /* Join without camera — softer */
+    .join-alt {
+      background: var(--surface-2);
+      color: var(--muted);
+      border-color: var(--border);
+      width: 100%;
+      margin-top: -2px;
+    }
+
+    /* ============================================================
+       MODALS
+    ============================================================ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(13,27,42,.48);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
     .modal-overlay.open { display: flex; }
-    .modal-box { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 20px; padding: 32px 28px; display: flex; flex-direction: column; gap: 14px; min-width: 320px; max-width: 420px; width: 100%; }
-    .modal-box h2 { margin: 0; font-size: 22px; }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 340px;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: var(--sh-xl);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-box h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      letter-spacing: -.3px;
+    }
+    .modal-box h2 span { color: var(--teal); }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: -8px;
+    }
     .modal-box input[type="text"],
-    .modal-box input[type="number"] { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 15px; font-family: inherit; outline: none; width: 100%; }
-    .modal-box input:focus { border-color: var(--accent); }
-    .field-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: -6px; }
-    .hint { margin: 0; font-size: 13px; color: var(--muted); font-weight: 400; }
-    .room-tag { font-size: 13px; color: var(--muted); font-weight: 400; }
-    .room-tag strong { color: var(--accent); font-family: monospace; }
+    .modal-box input[type="number"] {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      padding: 12px 15px;
+      font: 500 15px 'Poppins', system-ui;
+      outline: none;
+      width: 100%;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .modal-box input:focus {
+      border-color: var(--coral);
+      box-shadow: 0 0 0 4px var(--coral-ghost);
+    }
+    .hint { font-size: 13px; color: var(--muted); font-weight: 400; line-height: 1.6; }
+    .room-tag { font-size: 14px; color: var(--muted); font-weight: 500; }
+    .room-tag strong { color: var(--teal-dark); letter-spacing: .06em; }
+    .modal-divider { border: none; border-top: 1px solid var(--border); }
 
-    /* ---- BUTTONS ---- */
-    button { background: var(--surface-2); color: var(--text); border: 1px solid var(--accent-ghost); border-radius: 10px; padding: 9px 14px; cursor: pointer; font: inherit; font-size: 14px; }
-    button:hover { border-color: var(--accent); }
-    .primary { background: #d0a6e6; color: #2b1736; border-color: #c090da; }
-    .primary:hover { background: #dab8ee; }
-    .warn { background: #ffb3c1; color: #2d0f17; border-color: #f08090; }
-    .session-btn { min-width: 110px; }
+    .observer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-2);
+      user-select: none;
+      padding: 10px 14px;
+      border-radius: var(--radius-s);
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      transition: border-color .15s, background .15s;
+    }
+    .observer-row:hover { border-color: var(--teal); background: var(--teal-ghost); }
+    .observer-row input[type="checkbox"] { accent-color: var(--teal); width: 17px; height: 17px; flex-shrink: 0; }
 
-    /* ---- TOP BAR ---- */
-    .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); min-height: 52px; }
-    .session-title { font-size: 16px; font-weight: 700; color: var(--muted); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #hostControls { display: none; gap: 8px; align-items: center; }
-    .invite-btn { background: var(--accent-ghost); color: var(--accent); border-color: var(--accent-ghost); font-size: 13px; }
-    .invite-btn:hover { background: #3a2b54; }
+    /* ============================================================
+       TOP BAR
+    ============================================================ */
+    .top {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 0 18px;
+      height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(80,40,30,.07);
+      position: relative;
+      z-index: 10;
+    }
+    .top::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--teal-light), var(--coral));
+      border-radius: 0 3px 3px 0;
+    }
 
-    /* ---- VIDEO GRID ---- */
-    #videoContainer { width: 100%; height: 60vh; display: grid; gap: 8px; padding: 10px; background: #000; box-sizing: border-box; }
-    .video-tile { position: relative; width: 100%; height: 100%; min-height: 0; background: #111; border-radius: 12px; overflow: hidden; transition: box-shadow 0.15s; display: flex; align-items: center; justify-content: center; }
-    .video-tile video { width: 100%; height: 100%; object-fit: contain; display: block; background: #111; }
-    .tile-label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; }
-    .tile-timer { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: var(--digits); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 8px; pointer-events: none; backdrop-filter: blur(4px); z-index: 2; font-variant-numeric: tabular-nums; }
-    .tile-timer.overtime { color: #ff6b6b; }
-    .video-tile.speaking { box-shadow: 0 0 0 3px #b583c6, 0 0 18px 4px rgba(181,131,198,0.4); }
-    .video-tile.overtime-tile { box-shadow: 0 0 0 3px #ff6b6b, 0 0 18px 4px rgba(255,107,107,0.4); }
-    .no-video-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--accent-ghost); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--accent); position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    .brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+    .brand-dot {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--teal-light), var(--coral));
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(240,90,110,.3);
+      transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+    }
+    .brand-dot:hover { transform: scale(1.12) rotate(-4deg); box-shadow: 0 6px 18px rgba(240,90,110,.35); }
 
-    /* ---- DASHBOARD ---- */
-    .wrap { height: 35vh; display: grid; grid-template-columns: 480px 1fr; gap: 18px; padding: 14px 18px; box-sizing: border-box; }
-    .panel { background: var(--surface); border: 1px solid var(--accent-ghost); border-radius: 16px; padding: 16px 18px; overflow: hidden; }
-    .panel-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .name { font-size: 38px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .big { font-size: 88px; color: var(--digits); transition: color 0.3s; font-variant-numeric: tabular-nums; line-height: 1; }
-    .big.overtime { color: #ff6b6b; animation: flash 0.8s infinite alternate; }
-    @keyframes flash { from { opacity: 1; } to { opacity: 0.4; } }
-    .speakers-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: calc(35vh - 70px); }
-    .speakers-list li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
-    .speakers-list li.active-speaker { background: var(--accent-ghost); border: 1px solid var(--accent); }
-    .speakers-list li .sp-name { flex: 1; }
-    .speakers-list li .sp-time { font-size: 13px; color: var(--digits); font-variant-numeric: tabular-nums; }
-    .speakers-list li .sp-time.overtime { color: #ff6b6b; }
-    .sp-badge { font-size: 10px; padding: 2px 6px; border-radius: 5px; background: var(--accent-ghost); color: var(--accent); }
+    .session-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-    /* ---- SETUP MODAL SPECIFICS ---- */
-    .time-row { display: flex; align-items: center; gap: 10px; }
-    .time-row input { width: 90px; }
-    .time-row span { color: var(--muted); font-weight: 400; }
-    .speaker-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
-    .speaker-tag { display: flex; align-items: center; gap: 6px; background: var(--accent-ghost); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
-    .speaker-tag button { background: none; border: none; color: var(--muted); padding: 0; cursor: pointer; font-size: 14px; line-height: 1; }
-    .speaker-tag button:hover { color: #ff6b6b; }
+    #hostControls { display: none; gap: 6px; align-items: center; }
+
+    .share-btn { color: var(--muted); font-size: 13px; border-radius: 50px; }
+    .share-btn.active {
+      background: var(--teal-ghost);
+      color: var(--teal-dark);
+      border-color: rgba(62,205,180,.4);
+      transform: translateY(-1px);
+    }
+
+    .invite-btn {
+      background: linear-gradient(135deg, var(--teal-ghost), #d0f7ef);
+      color: var(--teal-dark);
+      border-color: rgba(62,205,180,.4);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .invite-btn:hover:not(:disabled) {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal);
+      box-shadow: 0 6px 18px var(--teal-shadow);
+    }
+
+    /* ============================================================
+       PHASE PANEL
+    ============================================================ */
+    .phase-panel {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 18px;
+      flex-wrap: wrap;
+    }
+    .phase-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, var(--teal-light), var(--teal-dark));
+      color: #fff;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 14px;
+      letter-spacing: .04em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px var(--teal-shadow);
+    }
+    .phase-name-txt { font-size: 15px; font-weight: 700; }
+    .phase-dur-txt {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      background: var(--surface-3);
+      padding: 3px 10px;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+    }
+
+    .phase-host-area {
+      border-top: 1px solid var(--border);
+      padding: 14px 18px 16px;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--surface-2);
+      display: none;
+    }
+
+    .script-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--teal-dark);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .phase-script {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-left: 4px solid var(--teal);
+      border-radius: var(--radius-s);
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-2);
+      line-height: 1.75;
+      white-space: pre-wrap;
+      max-height: 108px;
+      overflow-y: auto;
+      box-shadow: var(--sh-xs);
+    }
+
+    .phase-nav { display: flex; gap: 10px; }
+    .phase-nav button { flex: 1; }
+
+    /* ============================================================
+       SONG ROW
+    ============================================================ */
+    .song-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, var(--teal-ghost), #fff);
+      border: 1.5px solid rgba(62,205,180,.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      box-shadow: var(--sh-xs);
+    }
+    .song-play-btn {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      padding: 0;
+      background: linear-gradient(135deg, var(--teal-light), var(--teal-dark));
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 12px var(--teal-shadow);
+      flex-shrink: 0;
+      transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+    }
+    .song-play-btn:hover:not(:disabled) {
+      transform: scale(1.12);
+      box-shadow: 0 6px 20px var(--teal-shadow);
+      color: #fff;
+    }
+    .song-play-btn.missing {
+      background: var(--surface-3);
+      color: var(--muted-2);
+      box-shadow: none;
+      border: 1.5px solid var(--border);
+    }
+    .song-info { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+    /* ============================================================
+       VIDEO GRID
+    ============================================================ */
+    #videoContainer {
+      width: 100%;
+      height: 52vh;
+      display: grid;
+      gap: 7px;
+      padding: 9px;
+      background: var(--video-bg);
+      box-sizing: border-box;
+    }
+    .video-tile {
+      position: relative;
+      width: 100%; height: 100%;
+      min-height: 0;
+      background: var(--tile-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow .25s;
+    }
+    /* contain keeps full frame visible — no cropping */
+    .video-tile video { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--tile-bg); }
+
+    .tile-label {
+      position: absolute;
+      bottom: 10px; left: 10px;
+      background: rgba(10,8,12,.65);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 50px;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    .tile-timer {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(10,8,12,.65);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 11px;
+      border-radius: 50px;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 2;
+      font-variant-numeric: tabular-nums;
+    }
+    .tile-timer.overtime { color: #ff8a98; }
+
+    .tile-mode {
+      position: absolute;
+      top: 10px; left: 10px;
+      font-size: 10px; font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 50px;
+      pointer-events: none;
+      z-index: 2;
+      color: #fff;
+      display: none;
+      backdrop-filter: blur(6px);
+    }
+
+    .video-tile.speaking  { box-shadow: 0 0 0 3px var(--orange), 0 0 28px var(--orange-shadow); }
+    .video-tile.overtime-tile { box-shadow: 0 0 0 3px var(--coral), 0 0 28px var(--coral-shadow); }
+    .video-tile.screen-sharing { box-shadow: 0 0 0 2px var(--teal), 0 0 20px var(--teal-shadow); }
+
+    .no-video-avatar {
+      width: 76px; height: 76px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2a1e2e, #1a1520);
+      border: 2px solid rgba(62,205,180,.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700;
+      color: var(--teal);
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+    }
+
+    /* ============================================================
+       CONVERSATIONAL MENU (Phase 7)
+    ============================================================ */
+    #convMenuPanel {
+      padding: 14px 18px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #fffaf5, var(--orange-ghost));
+      display: none;
+    }
+    .conv-menu-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--orange-dark);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mode-options { display: flex; gap: 9px; flex-wrap: wrap; }
+    .mode-btn {
+      font-size: 13px; font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 50px;
+      border-width: 1.5px;
+    }
+    .mode-btn.selected { color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+
+    /* ============================================================
+       BOTTOM DASHBOARD
+    ============================================================ */
+    .wrap {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 14px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-l);
+      padding: 16px 18px;
+      overflow: hidden;
+      box-shadow: var(--sh-sm);
+    }
+    .panel-label {
+      font-size: 10px; font-weight: 700;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+    }
+    .cur-name {
+      font-size: 22px; font-weight: 700;
+      color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cur-time {
+      font-size: 56px; font-weight: 800;
+      color: var(--coral);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      transition: color .3s;
+    }
+    .cur-time.overtime { animation: flash .8s infinite alternate; }
+    @keyframes flash { from { opacity: 1; } to { opacity: .3; } }
+
+    .session-meta { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 5px; }
+
+    .speakers-list { list-style: none; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 130px; }
+    .speakers-list li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--radius-s);
+      background: var(--surface-2);
+      border: 1.5px solid transparent;
+      font-size: 13px;
+      transition: background .15s, border-color .15s;
+    }
+    .speakers-list li.active-sp {
+      background: var(--orange-ghost);
+      border-color: rgba(247,145,58,.45);
+    }
+    .sp-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+    .sp-time { font-variant-numeric: tabular-nums; color: var(--coral); font-size: 13px; font-weight: 700; }
+    .sp-time.overtime { color: var(--coral); }
+
+    .sp-mode-badge {
+      font-size: 10px; padding: 3px 8px;
+      border-radius: 50px;
+      color: #fff; font-weight: 700;
+      letter-spacing: .03em; white-space: nowrap;
+    }
+    .sp-controls { display: flex; gap: 5px; }
+
+    .sp-start-btn {
+      font-size: 11px; font-weight: 700;
+      padding: 5px 11px; border-radius: 50px;
+      background: var(--teal-ghost);
+      color: var(--teal-dark);
+      border-color: rgba(62,205,180,.4);
+      box-shadow: none;
+      transition: background .15s, color .15s, transform .15s cubic-bezier(.34,1.56,.64,1);
+    }
+    .sp-start-btn:hover:not(:disabled) { background: var(--teal); color: #fff; border-color: var(--teal); transform: translateY(-1px); }
+    .sp-start-btn.resume-btn { background: var(--orange-ghost); color: var(--orange-dark); border-color: rgba(247,145,58,.45); }
+    .sp-start-btn.resume-btn:hover:not(:disabled) { background: var(--orange); color: #fff; border-color: var(--orange); }
+
+    .sp-pause-btn {
+      font-size: 11px; font-weight: 700;
+      padding: 5px 11px; border-radius: 50px;
+      background: var(--coral-ghost);
+      color: var(--coral);
+      border-color: rgba(240,90,110,.4);
+      box-shadow: none;
+      transition: background .15s, color .15s, transform .15s cubic-bezier(.34,1.56,.64,1);
+    }
+    .sp-pause-btn:hover:not(:disabled) { background: var(--coral); color: #fff; border-color: var(--coral); transform: translateY(-1px); }
+
+    /* ============================================================
+       SETUP / SONG ADMIN
+    ============================================================ */
+    .time-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .time-row input { width: 80px; }
+    .time-row span { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+    .speaker-tags { display: flex; flex-wrap: wrap; gap: 7px; min-height: 30px; }
+    .speaker-tag {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--teal-ghost);
+      border: 1.5px solid rgba(62,205,180,.35);
+      border-radius: 50px;
+      padding: 4px 6px 4px 12px;
+      font-size: 13px; font-weight: 600;
+      color: var(--teal-dark);
+    }
+    .speaker-tag .remove-tag {
+      display: flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px;
+      background: none; border: none; padding: 0; cursor: pointer;
+      color: rgba(62,205,180,.6); border-radius: 50%;
+      box-shadow: none;
+      transition: color .12s, background .12s;
+    }
+    .speaker-tag .remove-tag:hover { color: var(--coral); background: var(--coral-ghost); }
+
     .add-speaker-row { display: flex; gap: 8px; }
     .add-speaker-row input { flex: 1; }
-    .setup-section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-    @media (max-width: 700px) {
-      .wrap { grid-template-columns: 1fr; height: auto; }
-      .big { font-size: 60px; }
+    .file-upload-section { display: flex; flex-direction: column; gap: 8px; }
+    .file-row { display: flex; align-items: center; gap: 8px; }
+    .file-row input[type="file"] { flex: 1; font-size: 12px; color: var(--muted); }
+    .upload-btn { font-size: 12px; padding: 7px 14px; }
+    .upload-status { font-size: 12px; color: var(--teal-dark); font-weight: 600; }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 720px) {
+      .wrap { grid-template-columns: 1fr; }
+      .cur-time { font-size: 42px; }
+      .top { height: auto; min-height: 56px; padding: 10px 14px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- JOIN MODAL -->
+  <!-- ============================================================
+       JOIN MODAL
+  ============================================================ -->
   <div id="joinModal" class="modal-overlay open">
     <div class="modal-box">
-      <h2>Join Session</h2>
+      <h2>Join <span>Session</span></h2>
       <p id="roomTag" class="room-tag"></p>
       <label class="field-label">Your Name</label>
       <input id="nameInput" type="text" placeholder="Enter your name" maxlength="40" autocomplete="off" />
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;font-size:14px">
+      <label class="observer-row">
         <input type="checkbox" id="observerCheck" />
-        <span>Join as observer (won't be timed)</span>
+        <span>Join as observer — won't be timed</span>
       </label>
-      <button class="primary" id="joinBtn">Join with Camera</button>
+      <button class="btn-primary" id="joinBtn" style="padding:11px 14px">
+        <i data-lucide="video" style="width:16px;height:16px"></i>
+        Join with Camera
+      </button>
+      <button class="join-alt" id="joinNoCamBtn" style="padding:10px 14px">
+        <i data-lucide="video-off" style="width:15px;height:15px"></i>
+        Join without Camera
+      </button>
     </div>
   </div>
 
-  <!-- SETUP MODAL (host) -->
+  <!-- ============================================================
+       SETUP MODAL
+  ============================================================ -->
   <div id="setupModal" class="modal-overlay">
     <div class="modal-box">
-      <h2>Session Setup</h2>
-
+      <h2>Session <span>Setup</span></h2>
       <label class="field-label">Session Title</label>
-      <input id="setupTitle" type="text" placeholder="e.g. Group Therapy — April 7" />
-
-      <label class="field-label">Time per participant</label>
+      <input id="setupTitle" type="text" placeholder="e.g. Group Therapy — April 25" />
+      <label class="field-label">Total Discussion Time (Phase 8)</label>
       <div class="time-row">
-        <input id="setupMinutes" type="number" min="1" max="120" value="5" />
-        <span>minutes each</span>
+        <input id="setupMinutes" type="number" min="1" max="180" value="20" />
+        <span>minutes — split equally across all speakers</span>
       </div>
-
-      <p class="hint">Participants are added automatically when they join the room. You can also add them manually below.</p>
-
-      <label class="field-label">Add participants manually</label>
+      <p class="hint">Speakers are added automatically when they join. Participants who choose Pass are excluded from the time split.</p>
+      <hr class="modal-divider" />
+      <label class="field-label">Add Participants Manually</label>
       <div class="add-speaker-row">
         <input id="addSpeakerInput" type="text" placeholder="Name" maxlength="40" />
-        <button id="addSpeakerBtn" onclick="addSpeakerFromSetup()">Add</button>
+        <button id="addSpeakerBtn" onclick="addSpeakerFromSetup()">
+          <i data-lucide="user-plus" style="width:14px;height:14px"></i>
+          Add
+        </button>
       </div>
       <div id="setupSpeakerTags" class="speaker-tags"></div>
-
-      <button class="primary" id="setupDoneBtn">Apply Settings</button>
+      <button class="btn-primary" id="setupDoneBtn" style="padding:11px 14px">
+        <i data-lucide="check" style="width:15px;height:15px"></i>
+        Apply Settings
+      </button>
     </div>
   </div>
 
-  <!-- MAIN APP -->
-  <div id="app">
-    <div class="top">
-      <span id="sessionTitleDisplay" class="session-title">Session</span>
-      <div id="hostControls" style="display:none;gap:8px;align-items:center">
-        <button id="sessionBtn" class="primary session-btn" onclick="toggleSession()">&#9654; Start</button>
-        <button onclick="giftTime()" title="Give active speaker +1 minute">+1 min</button>
-        <button class="warn" onclick="resetAll()" title="Reset all timers">Reset</button>
-        <button onclick="openSetup()" title="Session settings" style="padding:8px 11px;font-size:17px">&#9881;</button>
+  <!-- ============================================================
+       SONG ADMIN MODAL
+  ============================================================ -->
+  <div id="songAdminModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>Song <span>Admin</span></h2>
+      <p class="hint">Upload MP3 files for the intro (Phase 1) and closing (Phase 10) songs. Files are stored on the server and shared across all sessions.</p>
+      <hr class="modal-divider" />
+      <label class="field-label">Intro Song &mdash; Phase 1</label>
+      <div class="file-upload-section">
+        <div class="file-row">
+          <input type="file" id="introFile" accept=".mp3,audio/*" />
+          <button class="upload-btn btn-primary" onclick="uploadSong('intro')">
+            <i data-lucide="upload-cloud" style="width:14px;height:14px"></i>
+            Upload
+          </button>
+        </div>
+        <span id="introStatus" class="upload-status"></span>
       </div>
-      <button onclick="copyInvite()" class="invite-btn">&#128279; Copy Invite</button>
+      <hr class="modal-divider" />
+      <label class="field-label">Closing Song &mdash; Phase 10</label>
+      <div class="file-upload-section">
+        <div class="file-row">
+          <input type="file" id="closingFile" accept=".mp3,audio/*" />
+          <button class="upload-btn btn-primary" onclick="uploadSong('closing')">
+            <i data-lucide="upload-cloud" style="width:14px;height:14px"></i>
+            Upload
+          </button>
+        </div>
+        <span id="closingStatus" class="upload-status"></span>
+      </div>
+      <button onclick="document.getElementById('songAdminModal').classList.remove('open')" style="margin-top:4px">
+        <i data-lucide="x" style="width:14px;height:14px"></i>
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN APP
+  ============================================================ -->
+  <div id="app">
+
+    <!-- TOP BAR -->
+    <div class="top">
+      <div class="brand">
+        <div class="brand-dot">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+      </div>
+
+      <span id="sessionTitleDisplay" class="session-title">Session</span>
+
+      <div id="hostControls" style="display:none;gap:6px;align-items:center">
+        <button onclick="giftTime()" title="Give active speaker +1 min" class="btn-teal-ghost">
+          <i data-lucide="circle-plus" style="width:14px;height:14px"></i>
+          +1 min
+        </button>
+        <button class="btn-danger" onclick="resetAll()">
+          <i data-lucide="rotate-ccw" style="width:14px;height:14px"></i>
+          Reset
+        </button>
+        <button class="btn-icon" onclick="openSetup()" title="Session settings">
+          <i data-lucide="settings-2" style="width:16px;height:16px"></i>
+        </button>
+        <button class="btn-icon" onclick="document.getElementById('songAdminModal').classList.add('open')" title="Song admin">
+          <i data-lucide="music-2" style="width:16px;height:16px"></i>
+        </button>
+      </div>
+
+      <button id="shareBtn" class="share-btn" onclick="toggleScreenShare()" style="display:none">
+        <i data-lucide="monitor-up" style="width:14px;height:14px"></i>
+        Share Screen
+      </button>
+      <button onclick="copyInvite()" class="invite-btn">
+        <i data-lucide="share-2" style="width:14px;height:14px"></i>
+        Copy Invite
+      </button>
     </div>
 
+    <!-- PHASE PANEL -->
+    <div class="phase-panel">
+      <div class="phase-header">
+        <span class="phase-pill">
+          <i data-lucide="layers" style="width:11px;height:11px"></i>
+          Phase <span id="phaseNum">1</span> of 10
+        </span>
+        <span id="phaseName" class="phase-name-txt">Intro Spiel</span>
+        <span id="phaseDur" class="phase-dur-txt">~3 min</span>
+      </div>
+
+      <div id="phaseHostArea" class="phase-host-area">
+        <div class="script-label">
+          <i data-lucide="file-text" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i>
+          Facilitator Script
+        </div>
+        <div id="phaseScript" class="phase-script"></div>
+
+        <div id="songRow" class="song-row" style="display:none">
+          <button id="songPlayBtn" class="song-play-btn missing" onclick="toggleSong()">
+            <i data-lucide="play" style="width:16px;height:16px;margin-left:2px"></i>
+          </button>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-2)" id="songLabel">Song</div>
+            <div id="songInfo" class="song-info"></div>
+          </div>
+        </div>
+
+        <div class="phase-nav">
+          <button id="prevPhaseBtn" onclick="prevPhase()" class="btn-ghost">
+            <i data-lucide="chevron-left" style="width:16px;height:16px"></i>
+            Prev
+          </button>
+          <button class="btn-primary" id="nextPhaseBtn" onclick="nextPhase()">
+            Next Phase
+            <i data-lucide="chevron-right" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONVERSATIONAL MENU (Phase 7) -->
+    <div id="convMenuPanel">
+      <div class="conv-menu-label">
+        <i data-lucide="message-circle" style="width:13px;height:13px"></i>
+        Choose your speaking mode for this round
+      </div>
+      <div id="modeOptions" class="mode-options"></div>
+    </div>
+
+    <!-- VIDEO GRID -->
     <div id="videoContainer"></div>
 
+    <!-- BOTTOM DASHBOARD -->
     <div class="wrap">
       <div class="panel">
         <div class="panel-label">Now Speaking</div>
-        <div id="curName" class="name">&#8212;</div>
-        <div id="curTime" class="big">&#8212;</div>
+        <div id="curName" class="cur-name">&#8212;</div>
+        <div id="curTime" class="cur-time">&#8212;</div>
+        <div id="sessionMeta" class="session-meta"></div>
       </div>
       <div class="panel">
-        <div class="panel-label">Participants</div>
+        <div class="panel-label" id="rightPanelLabel">Participants</div>
         <ul id="speakersList" class="speakers-list"></ul>
       </div>
     </div>
-  </div>
+
+  </div><!-- #app -->
 
   <script>
     /* ------------------------------------------------------------------ */
-    /*  ROOM ID — from URL param, or generate one for the host             */
+    /*  INLINE ICONS for dynamically generated content                      */
+    /* ------------------------------------------------------------------ */
+    const ICO = {
+      play:  `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+      pause: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`,
+      x:     `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+    };
+
+    /* ------------------------------------------------------------------ */
+    /*  PHASE DEFINITIONS                                                    */
+    /* ------------------------------------------------------------------ */
+    const PHASES = [
+      { name: "Intro Spiel",              duration: "~3 min",   song: "intro",   script: "[Placeholder: Intro spiel script for this phase. Read aloud to welcome the group.]" },
+      { name: "Choose Admin Roles",       duration: "~2 min",   song: null,      script: "[Placeholder: Script for selecting admin roles within the group.]" },
+      { name: "Choose Listening Roles",   duration: "~2 min",   song: null,      script: "[Placeholder: Script for assigning listening roles to participants.]" },
+      { name: "Welcome Message & Survey", duration: "~3 min",   song: null,      script: "[Placeholder: Welcome message and survey instructions for participants.]" },
+      { name: "Embody Stuckness",         duration: "~1 min",   song: null,      script: "[Placeholder: Guide the group through an embodiment exercise for stuckness.]" },
+      { name: "Embody Insight",           duration: "~1 min",   song: null,      script: "[Placeholder: Guide the group through an embodiment exercise for insight.]" },
+      { name: "Conversational Menu",      duration: "~1 min",   song: null,      script: "[Placeholder: Ask each participant to choose their speaking mode for the discussion round. Options are shown below.]" },
+      { name: "Taking Turns to Speak",    duration: "variable", song: null,      script: "[Timer phase. Use the ▶ Start buttons next to each speaker's name to run their timer. Only one person runs at a time. Participants who chose Pass are skipped.]" },
+      { name: "I Like, I Wish, I Wonder", duration: "~7 min",   song: null,      script: "[Placeholder: Facilitate the 'I Like, I Wish, I Wonder' reflection round.]" },
+      { name: "Closing Song",             duration: "~3 min",   song: "closing", script: "[Placeholder: Closing words for the session. Play the closing song for the group.]" },
+    ];
+
+    const SPEAKING_MODES = [
+      { key: "open",     label: "Open Dialogue",      color: "#3ECDB4" },
+      { key: "one-way",  label: "One-Way Share",       color: "#F7913A" },
+      { key: "pass",     label: "Pass",                color: "#94a3b8" },
+      { key: "venting",  label: "Venting / Emotional", color: "#F05A6E" },
+      { key: "creative", label: "Creative / Dramatic", color: "#8B5CF6" },
+    ];
+
+    /* ------------------------------------------------------------------ */
+    /*  ROOM ID                                                             */
     /* ------------------------------------------------------------------ */
     const params = new URLSearchParams(window.location.search);
     let roomId = params.get("room");
     if (!roomId) {
       roomId = Math.random().toString(36).slice(2, 8).toUpperCase();
-      const newUrl = window.location.pathname + "?room=" + roomId;
-      window.history.replaceState({}, "", newUrl);
+      window.history.replaceState({}, "", window.location.pathname + "?room=" + roomId);
     }
-
-    document.getElementById("roomTag").innerHTML =
-      "Room: <strong>" + roomId + "</strong>";
+    document.getElementById("roomTag").innerHTML = "Room: <strong>" + roomId + "</strong>";
 
     /* ------------------------------------------------------------------ */
     /*  STATE                                                               */
     /* ------------------------------------------------------------------ */
-    let myName = null;
-    let myRole = null;       // "host" | "participant" | "observer"
-    let serverState = null;
-    let lkRoom = null;
-    const tiles = new Map();  // identity -> { wrapper, labelEl, timerEl, analyser, name }
-    let audioCtx = null;
-    let vadInterval = null;
+    let myName        = null;
+    let myRole        = null;
+    let serverState   = null;
+    let lkRoom        = null;
+    let screenSharePub = null;
+    let audioCtx      = null;
+    const tiles       = new Map();
 
-    const THRESHOLD = 0.015;
+    let songs       = { intro: null, closing: null };
+    let songAudio   = new Audio();
+    let songPlaying = false;
+
+    fetch("/songs-info").then(r => r.json()).then(s => { songs = s; updateSongUI(); }).catch(() => {});
+    songAudio.addEventListener("ended", () => { songPlaying = false; updateSongUI(); });
 
     /* ------------------------------------------------------------------ */
     /*  SOCKET                                                              */
@@ -197,73 +1009,81 @@
       myRole = role;
       if (role === "host") {
         document.getElementById("hostControls").style.display = "flex";
-        // Show setup modal for host on first join
+        document.getElementById("phaseHostArea").style.display = "flex";
         openSetup();
       }
+      lucide.createIcons();
     });
 
     socket.on("state_update", (state) => {
       serverState = state;
+      if (state.songs) { songs = state.songs; updateSongUI(); }
       renderState(state);
     });
+
+    socket.on("songs_updated", (newSongs) => { songs = newSongs; updateSongUI(); });
 
     /* ------------------------------------------------------------------ */
     /*  JOIN MODAL                                                          */
     /* ------------------------------------------------------------------ */
-    const joinBtn = document.getElementById("joinBtn");
-    const nameInput = document.getElementById("nameInput");
+    const joinBtn      = document.getElementById("joinBtn");
+    const joinNoCamBtn = document.getElementById("joinNoCamBtn");
+    const nameInput    = document.getElementById("nameInput");
 
-    joinBtn.addEventListener("click", async () => {
+    async function doJoin(withCamera) {
       const name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
 
-      joinBtn.disabled = true;
-      joinBtn.textContent = "Getting camera…";
+      const btn = withCamera ? joinBtn : joinNoCamBtn;
+      btn.disabled = true;
+      btn.innerHTML = withCamera
+        ? ICO.play + " Getting camera…"
+        : ICO.play + " Joining…";
 
-      let stream;
+      let stream = null;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream = await navigator.mediaDevices.getUserMedia(
+          withCamera ? { video: true, audio: true } : { video: false, audio: true }
+        );
       } catch (e) {
-        alert("Camera/mic error: " + e.message);
-        joinBtn.disabled = false; joinBtn.textContent = "Join with Camera";
+        alert((withCamera ? "Camera/mic" : "Mic") + " error: " + e.message);
+        btn.disabled = false;
+        // Restore button content
+        lucide.createIcons();
         return;
       }
 
-      const isObserver = document.getElementById("observerCheck").checked;
       myName = name;
-
       document.getElementById("joinModal").classList.remove("open");
-      joinBtn.disabled = false; joinBtn.textContent = "Join with Camera";
+      btn.disabled = false;
+      await continueJoin(name, stream, document.getElementById("observerCheck").checked, withCamera);
+    }
 
-      await continueJoin(name, stream, isObserver);
-    });
-
-    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinBtn.click(); });
+    joinBtn.addEventListener("click",      () => doJoin(true));
+    joinNoCamBtn.addEventListener("click", () => doJoin(false));
+    nameInput.addEventListener("keydown",  (e) => { if (e.key === "Enter") doJoin(true); });
 
     /* ------------------------------------------------------------------ */
     /*  JOIN FLOW                                                           */
     /* ------------------------------------------------------------------ */
-    async function continueJoin(username, localStream, isObserver) {
-      // Clear existing tiles
+    async function continueJoin(username, localStream, isObserver, withCamera) {
       document.getElementById("videoContainer").innerHTML = "";
       tiles.clear();
 
-      // Local tile
       const LOCAL_ID = "__local__";
-      const cleanName = username;
-      createTile(LOCAL_ID, username + " (you)", cleanName);
+      createTile(LOCAL_ID, username + " (you)", username);
 
-      const selfVid = document.createElement("video");
-      selfVid.srcObject = localStream;
-      selfVid.autoplay = true; selfVid.muted = true; selfVid.playsInline = true;
-      putVideoInTile(LOCAL_ID, selfVid);
-      hookAnalyserToStream(LOCAL_ID, localStream);
+      if (withCamera && localStream && localStream.getVideoTracks().length > 0) {
+        const selfVid = document.createElement("video");
+        selfVid.srcObject = localStream;
+        selfVid.autoplay = true; selfVid.muted = true; selfVid.playsInline = true;
+        putVideoInTile(LOCAL_ID, selfVid);
+      }
+      if (localStream) hookAnalyserToStream(LOCAL_ID, localStream);
 
-      // Join room via socket
-      const role = isObserver ? "observer" : "host"; // server downgrades to participant if host taken
-      socket.emit("join_room", { roomId, name: cleanName, role });
+      const role = isObserver ? "observer" : "host";
+      socket.emit("join_room", { roomId, name: username, role });
 
-      // Get LiveKit token and connect
       let data;
       try {
         const res = await fetch("/get-token?room=" + encodeURIComponent(roomId) + "&username=" + encodeURIComponent(username));
@@ -272,52 +1092,59 @@
       } catch (e) { alert("Token error: " + e.message); return; }
 
       lkRoom = new LivekitClient.Room();
-
       try {
         await lkRoom.connect("wss://therapyapp-4n3fl2as.livekit.cloud", data.token);
-      } catch (e) { alert("LiveKit connection error: " + e.message); return; }
+      } catch (e) { alert("LiveKit error: " + e.message); return; }
 
       try {
-        const vt = localStream.getVideoTracks()[0];
-        const at = localStream.getAudioTracks()[0];
-        if (vt) await lkRoom.localParticipant.publishTrack(vt);
-        if (at) await lkRoom.localParticipant.publishTrack(at);
+        if (localStream) {
+          const vt = localStream.getVideoTracks()[0];
+          const at = localStream.getAudioTracks()[0];
+          if (vt) await lkRoom.localParticipant.publishTrack(vt, { source: LivekitClient.Track.Source.Camera });
+          if (at) await lkRoom.localParticipant.publishTrack(at);
+        }
       } catch (e) { console.warn("publish failed", e); }
 
-      // Handle already-present participants
+      document.getElementById("shareBtn").style.display = "";
+      lucide.createIcons();
+
       lkRoom.remoteParticipants.forEach((participant) => {
-        const id = participant.identity;
-        const pName = participant.name || id;
+        const id = participant.identity, pName = participant.name || id;
         createTile(id, pName, pName);
         participant.trackPublications.forEach((pub) => {
-          if (!pub.isSubscribed || !pub.track) return;
+          if (!pub.isSubscribed || !pub.track || pub.source === LivekitClient.Track.Source.ScreenShare) return;
           if (pub.kind === "video") putVideoInTile(id, pub.track.attach());
           if (pub.kind === "audio") hookAnalyserToLKTrack(id, pub.track);
         });
+        participant.trackPublications.forEach((pub) => {
+          if (!pub.isSubscribed || !pub.track || pub.source !== LivekitClient.Track.Source.ScreenShare) return;
+          if (pub.kind === "video") showScreenInTile(id, pub.track.attach());
+        });
       });
 
-      // New remote track subscribed
-      lkRoom.on("trackSubscribed", (track, _pub, participant) => {
-        const id = participant.identity;
-        const pName = participant.name || id;
+      lkRoom.on("trackSubscribed", (track, pub, participant) => {
+        const id = participant.identity, pName = participant.name || id;
         createTile(id, pName, pName);
-        if (track.kind === "video") putVideoInTile(id, track.attach());
-        if (track.kind === "audio") hookAnalyserToLKTrack(id, track);
-      });
-
-      // Participant leaves LiveKit
-      lkRoom.on("participantDisconnected", (participant) => {
-        const id = participant.identity;
-        const t = tiles.get(id);
-        if (t) {
-          t.wrapper.remove();
-          tiles.delete(id);
-          updateVideoLayout();
+        if (pub.source === LivekitClient.Track.Source.ScreenShare) {
+          if (track.kind === "video") showScreenInTile(id, track.attach());
+        } else {
+          if (track.kind === "video") putVideoInTile(id, track.attach());
+          if (track.kind === "audio") hookAnalyserToLKTrack(id, track);
         }
       });
 
-      // Start sending VAD reports to server
-      startVadReporting();
+      lkRoom.on("trackUnsubscribed", (_track, pub, participant) => {
+        if (pub.source === LivekitClient.Track.Source.ScreenShare) restoreCameraInTile(participant.identity);
+      });
+
+      lkRoom.on("participantDisconnected", (participant) => {
+        const id = participant.identity;
+        [id, id + "__screen__"].forEach((k) => {
+          const t = tiles.get(k);
+          if (t) { t.wrapper.remove(); tiles.delete(k); }
+        });
+        updateVideoLayout();
+      });
     }
 
     /* ------------------------------------------------------------------ */
@@ -326,26 +1153,33 @@
     function createTile(identity, displayLabel, canonicalName) {
       if (tiles.has(identity)) return tiles.get(identity).wrapper;
 
-      const wrapper = document.createElement("div");
+      const wrapper  = document.createElement("div");
       wrapper.className = "video-tile";
 
-      const avatar = document.createElement("div");
+      const avatar   = document.createElement("div");
       avatar.className = "no-video-avatar";
       avatar.textContent = (canonicalName || displayLabel).charAt(0).toUpperCase();
 
-      const timerEl = document.createElement("div");
+      const timerEl  = document.createElement("div");
       timerEl.className = "tile-timer";
-      timerEl.textContent = "";
 
-      const label = document.createElement("div");
+      const modeEl   = document.createElement("div");
+      modeEl.className = "tile-mode";
+
+      const label    = document.createElement("div");
       label.className = "tile-label";
       label.textContent = displayLabel;
 
       wrapper.appendChild(avatar);
       wrapper.appendChild(timerEl);
+      wrapper.appendChild(modeEl);
       wrapper.appendChild(label);
 
-      tiles.set(identity, { wrapper, labelEl: label, timerEl, avatarEl: avatar, analyser: null, name: canonicalName || displayLabel });
+      tiles.set(identity, {
+        wrapper, labelEl: label, timerEl, modeEl, avatarEl: avatar,
+        analyser: null, name: canonicalName || displayLabel,
+        cameraVideoEl: null, screenVideoEl: null,
+      });
       document.getElementById("videoContainer").appendChild(wrapper);
       updateVideoLayout();
       return wrapper;
@@ -353,11 +1187,39 @@
 
     function putVideoInTile(identity, videoEl) {
       const t = tiles.get(identity);
-      if (!t || t.wrapper.querySelector("video")) return;
-      videoEl.autoplay = true;
-      videoEl.playsInline = true;
-      // Insert before timerEl so video is behind overlays
+      if (!t) return;
+      videoEl.autoplay = true; videoEl.playsInline = true;
+      const existing = t.wrapper.querySelector("video");
+      if (existing) existing.remove();
       t.wrapper.insertBefore(videoEl, t.timerEl);
+      t.cameraVideoEl = videoEl;
+      if (t.avatarEl) t.avatarEl.style.display = "none";
+    }
+
+    function showScreenInTile(identity, screenVideoEl) {
+      const t = tiles.get(identity);
+      if (!t) return;
+      screenVideoEl.autoplay = true; screenVideoEl.playsInline = true;
+      const existing = t.wrapper.querySelector("video");
+      if (existing) existing.remove();
+      t.wrapper.insertBefore(screenVideoEl, t.timerEl);
+      t.screenVideoEl = screenVideoEl;
+      t.wrapper.classList.add("screen-sharing");
+      if (t.avatarEl) t.avatarEl.style.display = "none";
+    }
+
+    function restoreCameraInTile(identity) {
+      const t = tiles.get(identity);
+      if (!t) return;
+      const existing = t.wrapper.querySelector("video");
+      if (existing) existing.remove();
+      t.screenVideoEl = null;
+      t.wrapper.classList.remove("screen-sharing");
+      if (t.cameraVideoEl) {
+        t.wrapper.insertBefore(t.cameraVideoEl, t.timerEl);
+      } else {
+        if (t.avatarEl) t.avatarEl.style.display = "";
+      }
     }
 
     function hookAnalyserToStream(identity, stream) {
@@ -367,8 +1229,7 @@
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const src = audioCtx.createMediaStreamSource(stream);
         const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.6;
+        analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.6;
         src.connect(analyser);
         t.analyser = analyser;
       } catch (e) { console.warn("analyser failed", e); }
@@ -379,161 +1240,316 @@
       catch (e) { console.warn("lk analyser failed", e); }
     }
 
-    function getRMS(analyser) {
-      if (!analyser) return 0;
-      const buf = new Uint8Array(analyser.fftSize);
-      analyser.getByteTimeDomainData(buf);
-      let sum = 0;
-      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
-      return Math.sqrt(sum / buf.length);
-    }
-
-    /* ------------------------------------------------------------------ */
-    /*  LAYOUT                                                              */
-    /* ------------------------------------------------------------------ */
     function updateVideoLayout() {
       const count = document.getElementById("videoContainer").children.length;
       if (count === 0) return;
       const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
-      const rows = Math.ceil(count / cols);
-      const vc = document.getElementById("videoContainer");
+      const vc   = document.getElementById("videoContainer");
       vc.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
-      vc.style.gridTemplateRows = "repeat(" + rows + ", 1fr)";
+      vc.style.gridTemplateRows   = "repeat(" + Math.ceil(count / cols) + ", 1fr)";
     }
 
     /* ------------------------------------------------------------------ */
-    /*  VAD REPORTING — send to server, server owns the timer              */
+    /*  SCREEN SHARING                                                      */
     /* ------------------------------------------------------------------ */
-    function startVadReporting() {
-      if (vadInterval) return;
-      vadInterval = setInterval(() => {
-        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    async function toggleScreenShare() {
+      if (screenSharePub) { await stopScreenShare(); } else { await startScreenShare(); }
+    }
 
-        let loudId = null, loudRMS = THRESHOLD;
-        tiles.forEach((t, id) => {
-          const rms = getRMS(t.analyser);
-          if (rms > loudRMS) { loudRMS = rms; loudId = id; }
+    async function startScreenShare() {
+      let screenStream;
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      } catch (e) {
+        if (e.name !== "NotAllowedError") alert("Screen share error: " + e.message);
+        return;
+      }
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) return;
+
+      const vid = document.createElement("video");
+      vid.srcObject = screenStream; vid.muted = true;
+      showScreenInTile("__local__", vid);
+
+      try {
+        screenSharePub = await lkRoom.localParticipant.publishTrack(screenTrack, {
+          source: LivekitClient.Track.Source.ScreenShare, name: "screen",
         });
-
-        const speakerName = loudId ? tiles.get(loudId)?.name : null;
-        socket.emit("vad_report", { roomId, speakerName: speakerName || null });
-      }, 200);
-    }
-
-    /* ------------------------------------------------------------------ */
-    /*  RENDER FROM SERVER STATE                                            */
-    /* ------------------------------------------------------------------ */
-    function renderState(state) {
-      // Session title
-      document.getElementById("sessionTitleDisplay").textContent = state.sessionTitle || "Session";
-
-      // Session button
-      const btn = document.getElementById("sessionBtn");
-      if (state.sessionActive) {
-        btn.innerHTML = "&#9646;&#9646; Pause";
-        btn.style.background = "#be123c";
-        btn.style.borderColor = "#9f1239";
-        btn.style.color = "#fff";
-      } else {
-        btn.innerHTML = "&#9654; Start";
-        btn.style.background = "";
-        btn.style.borderColor = "";
-        btn.style.color = "";
-        btn.classList.add("primary");
+      } catch (e) {
+        alert("Could not publish screen: " + e.message);
+        restoreCameraInTile("__local__"); return;
       }
 
-      // Update tile timer badges + speaking highlight
-      tiles.forEach((t, id) => {
-        const sp = state.speakers.find((s) => s.name === t.name);
-        const isActive = state.activeSpeaker && t.name === state.activeSpeaker;
-        const isSpeaking = isActive && state.sessionActive;
-
-        t.wrapper.classList.toggle("speaking", isSpeaking);
-
-        if (sp) {
-          const isOT = sp.remainingMs < 0;
-          t.timerEl.textContent = formatTime(sp.remainingMs);
-          t.timerEl.classList.toggle("overtime", isOT);
-          t.wrapper.classList.toggle("overtime-tile", isOT && isSpeaking);
-        } else {
-          t.timerEl.textContent = "";
-        }
-      });
-
-      // Dashboard
-      renderDashboard(state);
-
-      // Setup speaker tags if setup modal is open
-      renderSetupTags(state.speakers);
+      const btn = document.getElementById("shareBtn");
+      btn.innerHTML = ICO.pause + " Stop Sharing";
+      btn.classList.add("active");
+      screenTrack.addEventListener("ended", () => stopScreenShare(), { once: true });
     }
 
-    function renderDashboard(state) {
-      const list = document.getElementById("speakersList");
-      list.innerHTML = "";
+    async function stopScreenShare() {
+      if (!screenSharePub) return;
+      try { await lkRoom.localParticipant.unpublishTrack(screenSharePub.track); } catch (_) {}
+      screenSharePub = null;
+      restoreCameraInTile("__local__");
+      const btn = document.getElementById("shareBtn");
+      btn.innerHTML = '<i data-lucide="monitor-up" style="width:14px;height:14px"></i> Share Screen';
+      btn.classList.remove("active");
+      lucide.createIcons();
+    }
 
-      state.speakers.forEach((sp) => {
-        const isActive = sp.name === state.activeSpeaker;
-        const isOT = sp.remainingMs < 0;
-        const li = document.createElement("li");
-        if (isActive) li.classList.add("active-speaker");
-        li.innerHTML =
-          '<span class="sp-name">' + escHtml(sp.name) + '</span>' +
-          '<span class="sp-time' + (isOT ? " overtime" : "") + '">' + formatTime(sp.remainingMs) + '</span>';
-        list.appendChild(li);
-      });
+    /* ------------------------------------------------------------------ */
+    /*  PHASE NAVIGATION                                                    */
+    /* ------------------------------------------------------------------ */
+    function nextPhase() { socket.emit("next_phase", { roomId }); }
+    function prevPhase() { socket.emit("prev_phase", { roomId }); }
 
-      const activeSp = state.speakers.find((s) => s.name === state.activeSpeaker);
-      const displaySp = activeSp || state.speakers[0] || null;
+    /* ------------------------------------------------------------------ */
+    /*  SONGS                                                               */
+    /* ------------------------------------------------------------------ */
+    function updateSongUI() {
+      if (!serverState || myRole !== "host") return;
+      const phaseInfo = PHASES[serverState.phase - 1];
+      const songType  = phaseInfo.song;
+      const songRow   = document.getElementById("songRow");
+      const playBtn   = document.getElementById("songPlayBtn");
+      const songLabel = document.getElementById("songLabel");
+      const songInfo  = document.getElementById("songInfo");
 
-      if (displaySp) {
-        document.getElementById("curName").textContent = displaySp.name;
-        document.getElementById("curTime").textContent = formatTime(displaySp.remainingMs);
-        document.getElementById("curTime").classList.toggle("overtime", displaySp.remainingMs < 0);
+      if (!songType) { songRow.style.display = "none"; return; }
+
+      songRow.style.display = "flex";
+      const label = songType === "intro" ? "Intro Song" : "Closing Song";
+      const url   = songs[songType];
+
+      songLabel.textContent = label;
+      if (url) {
+        playBtn.classList.remove("missing");
+        playBtn.innerHTML = songPlaying
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3" style="margin-left:2px"/></svg>';
+        songInfo.textContent = songPlaying ? "Playing…" : "Ready to play";
       } else {
-        document.getElementById("curName").innerHTML = "&#8212;";
-        document.getElementById("curTime").innerHTML = state.sessionActive ? "&#8212;" : "&#8212;";
-        document.getElementById("curTime").classList.remove("overtime");
+        playBtn.classList.add("missing");
+        playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+        songInfo.textContent = "Not uploaded yet — use ♩ admin panel";
       }
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  HOST CONTROLS                                                       */
-    /* ------------------------------------------------------------------ */
-    function toggleSession() {
+    function toggleSong() {
       if (!serverState) return;
-      if (serverState.sessionActive) {
-        socket.emit("stop_session", { roomId });
+      const phaseInfo = PHASES[serverState.phase - 1];
+      const url = songs[phaseInfo.song];
+      if (!url) { alert("No song uploaded for this phase. Use the ♩ button to upload one."); return; }
+
+      if (songPlaying) {
+        songAudio.pause();
+        songPlaying = false;
       } else {
-        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-        socket.emit("start_session", { roomId });
+        if (songAudio.src !== window.location.origin + url) songAudio.src = url;
+        songAudio.play().catch((e) => alert("Playback error: " + e.message));
+        songPlaying = true;
       }
+      updateSongUI();
     }
 
-    function giftTime() {
-      socket.emit("gift_time", { roomId, amountMs: 60000 });
+    async function uploadSong(type) {
+      const fileInput = document.getElementById(type + "File");
+      const statusEl  = document.getElementById(type + "Status");
+      if (!fileInput.files.length) { alert("Choose a file first."); return; }
+      statusEl.textContent = "Uploading…";
+      const fd = new FormData();
+      fd.append("file", fileInput.files[0]);
+      try {
+        const res  = await fetch("/upload-song/" + type, { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.status);
+        songs = data.songs;
+        statusEl.textContent = "✓ Uploaded";
+        updateSongUI();
+      } catch (e) { statusEl.textContent = "Error: " + e.message; }
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  SPEAKING MODE                                                       */
+    /* ------------------------------------------------------------------ */
+    function setMyMode(mode) {
+      socket.emit("set_speaking_mode", { roomId, name: myName, mode });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  PHASE 8 SPEAKER CONTROLS                                            */
+    /* ------------------------------------------------------------------ */
+    function startSpeaker(name) { socket.emit("start_speaker", { roomId, name }); }
+    function stopSpeaker()      { socket.emit("stop_speaker",  { roomId }); }
+    function giftTime()         { socket.emit("gift_time", { roomId, amountMs: 60000 }); }
     function resetAll() {
       if (!confirm("Reset all speaker times? This cannot be undone.")) return;
       socket.emit("reset_session", { roomId });
     }
 
     /* ------------------------------------------------------------------ */
+    /*  RENDER                                                              */
+    /* ------------------------------------------------------------------ */
+    function renderState(state) {
+      const phase     = state.phase;
+      const phaseInfo = PHASES[phase - 1];
+
+      document.getElementById("phaseNum").textContent  = phase;
+      document.getElementById("phaseName").textContent = phaseInfo.name;
+      document.getElementById("phaseDur").textContent  = phaseInfo.duration;
+
+      if (myRole === "host") {
+        document.getElementById("phaseScript").textContent = phaseInfo.script;
+        document.getElementById("prevPhaseBtn").disabled   = (phase <= 1);
+        document.getElementById("nextPhaseBtn").disabled   = (phase >= 10);
+        updateSongUI();
+      }
+
+      document.getElementById("sessionTitleDisplay").textContent = state.sessionTitle || "Session";
+
+      const convPanel = document.getElementById("convMenuPanel");
+      if (phase === 7 && myRole !== "observer") {
+        convPanel.style.display = "";
+        renderConvMenu(state);
+      } else {
+        convPanel.style.display = "none";
+      }
+
+      tiles.forEach((t) => {
+        const sp       = state.speakers.find((s) => s.name === t.name);
+        const isActive = !!(state.activeSpeaker && t.name === state.activeSpeaker);
+        const isTiming = isActive && state.sessionActive;
+
+        t.wrapper.classList.toggle("speaking",      isTiming);
+        t.wrapper.classList.toggle("overtime-tile", isTiming && sp && sp.remainingMs < 0);
+
+        if (phase === 8 && sp && sp.speakingMode !== "pass") {
+          t.timerEl.textContent = formatTime(sp.remainingMs);
+          t.timerEl.classList.toggle("overtime", sp.remainingMs < 0);
+        } else {
+          t.timerEl.textContent = "";
+        }
+
+        if (phase === 8 && sp && sp.speakingMode) {
+          const mInfo = SPEAKING_MODES.find(m => m.key === sp.speakingMode);
+          if (mInfo) {
+            t.modeEl.textContent      = mInfo.label;
+            t.modeEl.style.background = mInfo.color;
+            t.modeEl.style.display    = "";
+          }
+        } else {
+          t.modeEl.style.display = "none";
+        }
+      });
+
+      renderDashboard(state);
+      renderSetupTags(state.speakers);
+    }
+
+    function renderConvMenu(state) {
+      const container = document.getElementById("modeOptions");
+      const mySp      = state.speakers.find(s => s.name === myName);
+      const myMode    = mySp?.speakingMode || null;
+      container.innerHTML = "";
+      SPEAKING_MODES.forEach(({ key, label, color }) => {
+        const btn = document.createElement("button");
+        btn.className = "mode-btn" + (myMode === key ? " selected" : "");
+        btn.textContent = label;
+        btn.style.borderColor = color;
+        if (myMode === key) btn.style.background = color;
+        btn.onclick = () => setMyMode(key);
+        container.appendChild(btn);
+      });
+    }
+
+    function renderDashboard(state) {
+      const phase    = state.phase;
+      const isPhase8 = phase === 8;
+      const list     = document.getElementById("speakersList");
+      list.innerHTML = "";
+
+      document.getElementById("rightPanelLabel").textContent = isPhase8 ? "Speakers" : "In This Session";
+
+      if (isPhase8) {
+        state.speakers.forEach((sp) => {
+          const isActive = sp.name === state.activeSpeaker;
+          const isOT     = sp.remainingMs < 0;
+          const isPass   = sp.speakingMode === "pass";
+          const li       = document.createElement("li");
+          if (isActive) li.classList.add("active-sp");
+
+          const mInfo = SPEAKING_MODES.find(m => m.key === sp.speakingMode);
+          const badge = mInfo
+            ? '<span class="sp-mode-badge" style="background:' + mInfo.color + '">' + escHtml(mInfo.label) + '</span>'
+            : "";
+
+          let controls = "";
+          if (myRole === "host") {
+            if (isPass) {
+              controls = '<span style="font-size:11px;color:var(--muted);font-weight:500">Passing</span>';
+            } else if (isActive && state.sessionActive) {
+              controls = '<button class="sp-pause-btn" onclick="stopSpeaker()">' + ICO.pause + ' Pause</button>';
+            } else if (isActive) {
+              controls = '<button class="sp-start-btn resume-btn" onclick="startSpeaker(\'' + escAttr(sp.name) + '\')">' + ICO.play + ' Resume</button>';
+            } else {
+              controls = '<button class="sp-start-btn" onclick="startSpeaker(\'' + escAttr(sp.name) + '\')">' + ICO.play + ' Start</button>';
+            }
+          }
+
+          li.innerHTML =
+            '<span class="sp-name">' + escHtml(sp.name) + '</span>' +
+            badge +
+            (isPass ? '' : '<span class="sp-time' + (isOT ? " overtime" : "") + '">' + formatTime(sp.remainingMs) + '</span>') +
+            '<div class="sp-controls">' + controls + '</div>';
+          list.appendChild(li);
+        });
+
+        const activeSp = state.speakers.find(s => s.name === state.activeSpeaker);
+        if (activeSp) {
+          document.getElementById("curName").textContent = activeSp.name;
+          document.getElementById("curTime").textContent = formatTime(activeSp.remainingMs);
+          document.getElementById("curTime").classList.toggle("overtime", activeSp.remainingMs < 0);
+        } else {
+          document.getElementById("curName").innerHTML = "&#8212;";
+          document.getElementById("curTime").innerHTML = "&#8212;";
+          document.getElementById("curTime").classList.remove("overtime");
+        }
+
+        const totalMin   = Math.round(state.totalSessionMs / 60000);
+        const active     = state.speakers.filter(s => s.speakingMode !== "pass");
+        const perSpSec   = active.length > 0 ? Math.round(state.totalSessionMs / active.length / 1000) : 0;
+        const perSpLabel = perSpSec >= 60
+          ? Math.floor(perSpSec / 60) + "m" + (perSpSec % 60 ? " " + (perSpSec % 60) + "s" : "")
+          : perSpSec + "s";
+        document.getElementById("sessionMeta").textContent =
+          totalMin + " min total · " + active.length + " speakers · ~" + perSpLabel + " each";
+
+      } else {
+        state.users.forEach((u) => {
+          const li = document.createElement("li");
+          li.innerHTML =
+            '<span class="sp-name">' + escHtml(u.name) + '</span>' +
+            '<span style="font-size:11px;color:var(--muted);font-weight:500;text-transform:capitalize">' + escHtml(u.role) + '</span>';
+          list.appendChild(li);
+        });
+        document.getElementById("curName").innerHTML = "&#8212;";
+        document.getElementById("curTime").innerHTML = "&#8212;";
+        document.getElementById("curTime").classList.remove("overtime");
+        document.getElementById("sessionMeta").textContent = "";
+      }
+    }
+
+    /* ------------------------------------------------------------------ */
     /*  SETUP MODAL                                                         */
     /* ------------------------------------------------------------------ */
-    let pendingSpeakerRemovals = new Set();
-
     function openSetup() {
-      const modal = document.getElementById("setupModal");
-      modal.classList.add("open");
-      // Pre-fill from server state if available
+      document.getElementById("setupModal").classList.add("open");
       if (serverState) {
-        document.getElementById("setupTitle").value = serverState.sessionTitle || "";
-        const mins = Math.round(serverState.config.timePerSpeakerMs / 60000);
-        document.getElementById("setupMinutes").value = mins || 5;
+        document.getElementById("setupTitle").value   = serverState.sessionTitle || "";
+        document.getElementById("setupMinutes").value = Math.round(serverState.totalSessionMs / 60000) || 20;
       }
-      pendingSpeakerRemovals.clear();
       renderSetupTags(serverState ? serverState.speakers : []);
+      lucide.createIcons();
     }
 
     function renderSetupTags(speakers) {
@@ -545,18 +1561,16 @@
         tag.className = "speaker-tag";
         tag.innerHTML =
           '<span>' + escHtml(sp.name) + '</span>' +
-          '<button title="Remove" onclick="removeSpeakerTag(\'' + escAttr(sp.name) + '\')">&#215;</button>';
+          '<button class="remove-tag" title="Remove" onclick="removeSpeakerTag(\'' + escAttr(sp.name) + '\')">' + ICO.x + '</button>';
         container.appendChild(tag);
       });
     }
 
-    function removeSpeakerTag(name) {
-      socket.emit("remove_speaker", { roomId, name });
-    }
+    function removeSpeakerTag(name) { socket.emit("remove_speaker", { roomId, name }); }
 
     function addSpeakerFromSetup() {
       const input = document.getElementById("addSpeakerInput");
-      const name = input.value.trim();
+      const name  = input.value.trim();
       if (!name) return;
       socket.emit("add_speaker", { roomId, name });
       input.value = "";
@@ -568,22 +1582,21 @@
 
     document.getElementById("setupDoneBtn").addEventListener("click", () => {
       const title = document.getElementById("setupTitle").value.trim();
-      const mins = parseFloat(document.getElementById("setupMinutes").value) || 5;
+      const mins  = parseFloat(document.getElementById("setupMinutes").value) || 20;
       socket.emit("configure_session", {
         roomId,
-        config: {
-          sessionTitle: title,
-          timePerSpeakerMs: Math.round(mins * 60 * 1000),
-        },
+        config: { sessionTitle: title, totalSessionMs: Math.round(mins * 60 * 1000) },
       });
       document.getElementById("setupModal").classList.remove("open");
     });
 
-    // Close setup modal on backdrop click
     document.getElementById("setupModal").addEventListener("click", (e) => {
-      if (e.target === document.getElementById("setupModal")) {
+      if (e.target === document.getElementById("setupModal"))
         document.getElementById("setupModal").classList.remove("open");
-      }
+    });
+    document.getElementById("songAdminModal").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("songAdminModal"))
+        document.getElementById("songAdminModal").classList.remove("open");
     });
 
     /* ------------------------------------------------------------------ */
@@ -594,9 +1607,9 @@
       navigator.clipboard.writeText(url).then(() => {
         const btn = document.querySelector(".invite-btn");
         const orig = btn.innerHTML;
-        btn.innerHTML = "&#10003; Copied!";
-        btn.style.color = "#7ee787";
-        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; }, 2000);
+        btn.innerHTML = ICO.play + " Copied!";
+        btn.style.color = "#3ECDB4";
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; lucide.createIcons(); }, 2000);
       }).catch(() => prompt("Copy this link:", url));
     }
 
@@ -604,21 +1617,18 @@
     /*  UTILS                                                               */
     /* ------------------------------------------------------------------ */
     function formatTime(ms) {
-      const isOT = ms < 0;
-      const abs = Math.abs(ms);
-      const s = Math.floor(abs / 1000);
-      return (isOT ? "-" : "") +
-        String(Math.floor(s / 60)).padStart(2, "0") + ":" +
-        String(s % 60).padStart(2, "0");
+      const isOT = ms < 0, abs = Math.abs(ms), s = Math.floor(abs / 1000);
+      return (isOT ? "-" : "") + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
     }
-
     function escHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
+    function escAttr(str) { return String(str).replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 
-    function escAttr(str) {
-      return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
-    }
+    /* ------------------------------------------------------------------ */
+    /*  INIT LUCIDE ICONS                                                   */
+    /* ------------------------------------------------------------------ */
+    lucide.createIcons();
   </script>
 </body>
 </html>

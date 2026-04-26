@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" font-family="Segoe UI, Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#0f0f14"/>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- BROWSER BOX -->
+  <rect x="30" y="30" width="530" height="340" rx="16" fill="#191625" stroke="#b583c6" stroke-width="1.5"/>
+  <text x="295" y="58" text-anchor="middle" fill="#b583c6" font-size="13" font-weight="700" letter-spacing="2">BROWSER — timer.html</text>
+
+  <!-- Socket.IO Client tile -->
+  <rect x="55" y="72" width="145" height="90" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="127" y="100" text-anchor="middle" fill="#ffd6e5" font-size="13" font-weight="700">Socket.IO</text>
+  <text x="127" y="118" text-anchor="middle" fill="#cbbfd7" font-size="11">Client</text>
+  <text x="127" y="137" text-anchor="middle" fill="#8878a8" font-size="10">state / events</text>
+  <text x="127" y="151" text-anchor="middle" fill="#8878a8" font-size="10">via WebSocket</text>
+
+  <!-- LiveKit Client tile -->
+  <rect x="220" y="72" width="145" height="90" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="292" y="100" text-anchor="middle" fill="#ffd6e5" font-size="13" font-weight="700">LiveKit</text>
+  <text x="292" y="118" text-anchor="middle" fill="#cbbfd7" font-size="11">Client SDK</text>
+  <text x="292" y="137" text-anchor="middle" fill="#8878a8" font-size="10">video + audio</text>
+  <text x="292" y="151" text-anchor="middle" fill="#8878a8" font-size="10">via WebRTC</text>
+
+  <!-- Web Audio API tile -->
+  <rect x="385" y="72" width="145" height="90" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="457" y="100" text-anchor="middle" fill="#ffd6e5" font-size="13" font-weight="700">Web Audio</text>
+  <text x="457" y="118" text-anchor="middle" fill="#cbbfd7" font-size="11">API (VAD)</text>
+  <text x="457" y="137" text-anchor="middle" fill="#8878a8" font-size="10">measures RMS</text>
+  <text x="457" y="151" text-anchor="middle" fill="#8878a8" font-size="10">per participant</text>
+
+  <!-- UI layer -->
+  <rect x="55" y="185" width="475" height="75" rx="10" fill="#1a1328" stroke="#2b2340" stroke-width="1.2"/>
+  <text x="292" y="210" text-anchor="middle" fill="#ffd6e5" font-size="13" font-weight="700">UI Layer</text>
+  <text x="170" y="232" text-anchor="middle" fill="#cbbfd7" font-size="11">CSS Grid (video tiles)</text>
+  <text x="342" y="232" text-anchor="middle" fill="#cbbfd7" font-size="11">Host / Viewer controls</text>
+  <text x="490" y="232" text-anchor="middle" fill="#cbbfd7" font-size="11">Invite link</text>
+  <text x="170" y="248" text-anchor="middle" fill="#8878a8" font-size="10">dynamic layout</text>
+  <text x="342" y="248" text-anchor="middle" fill="#8878a8" font-size="10">role-gated buttons</text>
+  <text x="490" y="248" text-anchor="middle" fill="#8878a8" font-size="10">?room= URL param</text>
+
+  <!-- getUserMedia -->
+  <rect x="55" y="282" width="475" height="72" rx="10" fill="#1a1328" stroke="#2b2340" stroke-width="1.2"/>
+  <text x="292" y="307" text-anchor="middle" fill="#ffd6e5" font-size="13" font-weight="700">getUserMedia()</text>
+  <text x="292" y="326" text-anchor="middle" fill="#cbbfd7" font-size="11">requests camera + mic from browser</text>
+  <text x="292" y="344" text-anchor="middle" fill="#8878a8" font-size="10">stream fed into both LiveKit (publish) and Web Audio API (VAD)</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- NODE SERVER BOX -->
+  <rect x="30" y="420" width="350" height="175" rx="16" fill="#191625" stroke="#b583c6" stroke-width="1.5"/>
+  <text x="205" y="448" text-anchor="middle" fill="#b583c6" font-size="13" font-weight="700" letter-spacing="2">NODE.JS SERVER</text>
+
+  <rect x="55" y="460" width="140" height="115" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="125" y="483" text-anchor="middle" fill="#ffd6e5" font-size="12" font-weight="700">Socket.IO</text>
+  <text x="125" y="499" text-anchor="middle" fill="#8878a8" font-size="10">• join_room</text>
+  <text x="125" y="513" text-anchor="middle" fill="#8878a8" font-size="10">• start/stop session</text>
+  <text x="125" y="527" text-anchor="middle" fill="#8878a8" font-size="10">• vad_report</text>
+  <text x="125" y="541" text-anchor="middle" fill="#8878a8" font-size="10">• state_update (broadcast)</text>
+  <text x="125" y="555" text-anchor="middle" fill="#8878a8" font-size="10">• server-side timer</text>
+  <text x="125" y="569" text-anchor="middle" fill="#8878a8" font-size="10">• host enforcement</text>
+
+  <rect x="215" y="460" width="140" height="115" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="285" y="483" text-anchor="middle" fill="#ffd6e5" font-size="12" font-weight="700">Express</text>
+  <text x="285" y="499" text-anchor="middle" fill="#8878a8" font-size="10">• serves timer.html</text>
+  <text x="285" y="513" text-anchor="middle" fill="#8878a8" font-size="10">• GET /get-token</text>
+  <text x="285" y="527" text-anchor="middle" fill="#8878a8" font-size="10">  signs JWT with</text>
+  <text x="285" y="541" text-anchor="middle" fill="#8878a8" font-size="10">  LiveKit Server SDK</text>
+  <text x="285" y="555" text-anchor="middle" fill="#8878a8" font-size="10">  (API key + secret)</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- LIVEKIT CLOUD BOX -->
+  <rect x="550" y="420" width="320" height="175" rx="16" fill="#191625" stroke="#b583c6" stroke-width="1.5"/>
+  <text x="710" y="448" text-anchor="middle" fill="#b583c6" font-size="13" font-weight="700" letter-spacing="2">LIVEKIT CLOUD</text>
+
+  <rect x="575" y="460" width="270" height="115" rx="10" fill="#221c33" stroke="#3a2b54" stroke-width="1.2"/>
+  <text x="710" y="485" text-anchor="middle" fill="#ffd6e5" font-size="12" font-weight="700">WebRTC Media Server</text>
+  <text x="710" y="505" text-anchor="middle" fill="#8878a8" font-size="10">wss://therapyapp-4n3fl2as.livekit.cloud</text>
+  <text x="710" y="523" text-anchor="middle" fill="#8878a8" font-size="10">• routes video and audio between peers</text>
+  <text x="710" y="539" text-anchor="middle" fill="#8878a8" font-size="10">• validates JWT before allowing join</text>
+  <text x="710" y="555" text-anchor="middle" fill="#8878a8" font-size="10">• handles all WebRTC signalling</text>
+  <text x="710" y="571" text-anchor="middle" fill="#8878a8" font-size="10">• SFU architecture (selective forwarding)</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- ARROWS -->
+
+  <!-- Browser Socket.IO client → Server (WebSocket) -->
+  <line x1="127" y1="370" x2="127" y2="420" stroke="#b583c6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="127,420 122,410 132,410" fill="#b583c6"/>
+  <line x1="127" y1="420" x2="127" y2="370" stroke="#b583c6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="90" y="400" fill="#8878a8" font-size="10">WebSocket</text>
+  <text x="90" y="413" fill="#8878a8" font-size="10">events</text>
+
+  <!-- Browser → /get-token -->
+  <line x1="292" y1="370" x2="285" y2="460" stroke="#6a9fb5" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="285,460 280,450 290,450" fill="#6a9fb5"/>
+  <text x="295" y="415" fill="#6a9fb5" font-size="10">GET /get-token</text>
+  <text x="295" y="428" fill="#6a9fb5" font-size="10">(fetch token)</text>
+
+  <!-- Browser LiveKit client → LiveKit Cloud -->
+  <line x1="530" y1="117" x2="575" y2="490" stroke="#7ee787" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="575,490 567,481 577,479" fill="#7ee787"/>
+  <text x="560" y="290" fill="#7ee787" font-size="10">WebRTC</text>
+  <text x="555" y="303" fill="#7ee787" font-size="10">video/audio</text>
+
+  <!-- VAD arrow label -->
+  <text x="430" y="395" fill="#ffb347" font-size="10">VAD result →</text>
+  <text x="430" y="408" fill="#ffb347" font-size="10">vad_report event</text>
+  <line x1="457" y1="370" x2="200" y2="460" stroke="#ffb347" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <polygon points="200,460 196,449 206,451" fill="#ffb347"/>
+
+  <!-- Server → LiveKit cloud (token validated) -->
+  <line x1="380" y1="517" x2="575" y2="517" stroke="#3a2b54" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <polygon points="575,517 565,512 565,522" fill="#3a2b54"/>
+  <text x="430" y="510" fill="#5a4878" font-size="10">JWT signed by server</text>
+  <text x="430" y="523" fill="#5a4878" font-size="10">validated by LiveKit</text>
+
+</svg>

@@ -1,18 +1,51 @@
 const express = require("express");
-const http = require("http");
+const http    = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
-const cors = require("cors");
+const path    = require("path");
+const cors    = require("cors");
+const fs      = require("fs");
+const multer  = require("multer");
+const { AccessToken } = require("livekit-server-sdk");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../client")));
 
+/* ---- SONGS ---- */
+
+const songsDir = path.join(__dirname, "songs");
+if (!fs.existsSync(songsDir)) fs.mkdirSync(songsDir);
+app.use("/songs", express.static(songsDir));
+
+const storage = multer.diskStorage({
+    destination: songsDir,
+    filename: (req, file, cb) => cb(null, req.params.type + path.extname(file.originalname)),
+});
+const upload = multer({ storage, limits: { fileSize: 30 * 1024 * 1024 } });
+
+let globalSongs = { intro: null, closing: null };
+["intro", "closing"].forEach((t) => {
+    const mp3 = path.join(songsDir, t + ".mp3");
+    if (fs.existsSync(mp3)) globalSongs[t] = "/songs/" + t + ".mp3";
+});
+
+app.get("/songs-info", (_req, res) => res.json(globalSongs));
+
+app.post("/upload-song/:type", upload.single("file"), (req, res) => {
+    const { type } = req.params;
+    if (!["intro", "closing"].includes(type)) return res.status(400).json({ error: "Invalid type" });
+    if (!req.file) return res.status(400).json({ error: "No file" });
+    const url = "/songs/" + req.file.filename;
+    globalSongs[type] = url;
+    io.emit("songs_updated", globalSongs);
+    res.json({ url, songs: globalSongs });
+});
+
+/* ---- LIVEKIT TOKEN ---- */
+
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
-
-const { AccessToken } = require("livekit-server-sdk");
 
 app.get("/get-token", async (req, res) => {
     const { room, username } = req.query;
@@ -28,30 +61,47 @@ app.get("/get-token", async (req, res) => {
 
 /* ---- ROOM STATE ---- */
 
-const rooms = {};
+const rooms     = {};
 const roomTimers = {};
 
 function createEmptyRoom() {
     return {
-        sessionTitle: "",
-        sessionActive: false,
-        speakers: [],        // [{ name, remainingMs, totalMs }]
-        users: {},           // { socketId: { id, name, role } }
+        sessionTitle:  "",
+        phase:         1,                    // 1–10
+        totalSessionMs: 20 * 60 * 1000,     // default 20 min for Phase 8
+        sessionActive: false,               // Phase 8 timer running
+        speakers:      [],                  // [{ name, remainingMs, totalMs, started, speakingMode }]
+        users:         {},                  // { socketId: { id, name, role } }
         activeSpeaker: null,
-        lastTick: null,
-        _silenceTimeout: null,
-        config: { timePerSpeakerMs: 5 * 60 * 1000 },
+        lastTick:      null,
     };
+}
+
+/* Recalculate per-speaker time for all non-started, non-pass speakers */
+function recalculateTimes(room) {
+    const consumedMs = room.speakers.reduce((sum, s) => {
+        if (!s.started) return sum;
+        return sum + Math.max(0, s.totalMs - s.remainingMs);
+    }, 0);
+
+    const pool    = Math.max(0, room.totalSessionMs - consumedMs);
+    const pending = room.speakers.filter((s) => !s.started && s.speakingMode !== "pass");
+
+    if (pending.length === 0) return;
+    const each = Math.floor(pool / pending.length);
+    pending.forEach((s) => { s.remainingMs = each; s.totalMs = each; });
 }
 
 function publicState(room) {
     return {
-        sessionTitle: room.sessionTitle,
-        sessionActive: room.sessionActive,
-        speakers: room.speakers.map((s) => ({ ...s })),
-        users: Object.values(room.users).map((u) => ({ name: u.name, role: u.role })),
-        activeSpeaker: room.activeSpeaker,
-        config: { ...room.config },
+        sessionTitle:   room.sessionTitle,
+        phase:          room.phase,
+        totalSessionMs: room.totalSessionMs,
+        sessionActive:  room.sessionActive,
+        speakers:       room.speakers.map((s) => ({ ...s })),
+        users:          Object.values(room.users).map((u) => ({ name: u.name, role: u.role })),
+        activeSpeaker:  room.activeSpeaker,
+        songs:          { ...globalSongs },
     };
 }
 
@@ -69,16 +119,14 @@ function startRoomTimer(roomId) {
     roomTimers[roomId] = setInterval(() => {
         const room = rooms[roomId];
         if (!room) { stopRoomTimer(roomId); return; }
-        if (!room.sessionActive) return;
+        if (!room.sessionActive || !room.activeSpeaker) return;
 
-        const now = Date.now();
+        const now     = Date.now();
         const elapsed = now - (room.lastTick || now);
         room.lastTick = now;
 
-        if (room.activeSpeaker) {
-            const sp = room.speakers.find((s) => s.name === room.activeSpeaker);
-            if (sp) sp.remainingMs = Math.max(-60000, sp.remainingMs - elapsed);
-        }
+        const sp = room.speakers.find((s) => s.name === room.activeSpeaker);
+        if (sp) sp.remainingMs = Math.max(-60000, sp.remainingMs - elapsed);
 
         broadcast(roomId);
     }, 200);
@@ -102,84 +150,86 @@ io.on("connection", (socket) => {
         if (!rooms[roomId]) rooms[roomId] = createEmptyRoom();
         const room = rooms[roomId];
 
-        // Only one host allowed; subsequent "host" requests become participant
-        const hasHost = Object.values(room.users).some((u) => u.role === "host");
-        let actualRole = role;
+        const hasHost   = Object.values(room.users).some((u) => u.role === "host");
+        let actualRole  = role;
         if (role === "host" && hasHost) actualRole = "participant";
 
         room.users[socket.id] = { id: socket.id, name, role: actualRole };
 
-        // Auto-add to speaker list (unless observer)
         if (actualRole !== "observer" && !room.speakers.find((s) => s.name === name)) {
-            room.speakers.push({
-                name,
-                remainingMs: room.config.timePerSpeakerMs,
-                totalMs: room.config.timePerSpeakerMs,
-            });
+            room.speakers.push({ name, remainingMs: 0, totalMs: 0, started: false, speakingMode: null });
+            recalculateTimes(room);
         }
 
         socket.emit("your_info", { role: actualRole, roomId });
         broadcast(roomId);
     });
 
-    /* CONFIGURE SESSION (host only) */
+    /* CONFIGURE SESSION */
     socket.on("configure_session", ({ roomId, config }) => {
         const room = rooms[roomId];
         if (!room || room.users[socket.id]?.role !== "host") return;
 
         if (config.sessionTitle !== undefined) room.sessionTitle = config.sessionTitle;
 
-        if (config.timePerSpeakerMs > 0) {
-            room.config.timePerSpeakerMs = config.timePerSpeakerMs;
-            // Apply new time to all speakers only if session hasn't started
+        if (config.totalSessionMs > 0) {
+            room.totalSessionMs = config.totalSessionMs;
             if (!room.sessionActive) {
-                room.speakers.forEach((s) => {
-                    s.remainingMs = room.config.timePerSpeakerMs;
-                    s.totalMs = room.config.timePerSpeakerMs;
-                });
+                room.speakers.forEach((s) => { s.started = false; });
+                recalculateTimes(room);
             }
         }
 
         broadcast(roomId);
     });
 
-    /* ADD / REMOVE SPEAKER (host only) */
-    socket.on("add_speaker", ({ roomId, name }) => {
+    /* PHASE NAVIGATION */
+    socket.on("next_phase", ({ roomId }) => {
+        const room = rooms[roomId];
+        if (!room || room.users[socket.id]?.role !== "host") return;
+        if (room.phase < 10) room.phase++;
+        if (room.phase === 8) recalculateTimes(room);
+        broadcast(roomId);
+    });
+
+    socket.on("prev_phase", ({ roomId }) => {
+        const room = rooms[roomId];
+        if (!room || room.users[socket.id]?.role !== "host") return;
+        if (room.phase > 1) room.phase--;
+        broadcast(roomId);
+    });
+
+    /* SPEAKER TIMER CONTROL (Phase 8, host only) */
+    socket.on("start_speaker", ({ roomId, name }) => {
         const room = rooms[roomId];
         if (!room || room.users[socket.id]?.role !== "host") return;
 
-        if (!room.speakers.find((s) => s.name === name)) {
-            room.speakers.push({
-                name,
-                remainingMs: room.config.timePerSpeakerMs,
-                totalMs: room.config.timePerSpeakerMs,
-            });
+        const sp = room.speakers.find((s) => s.name === name);
+        if (!sp || sp.speakingMode === "pass") return;
+
+        // Mark previously active speaker as started
+        if (room.activeSpeaker && room.activeSpeaker !== name) {
+            const prev = room.speakers.find((s) => s.name === room.activeSpeaker);
+            if (prev) prev.started = true;
         }
-        broadcast(roomId);
-    });
 
-    socket.on("remove_speaker", ({ roomId, name }) => {
-        const room = rooms[roomId];
-        if (!room || room.users[socket.id]?.role !== "host") return;
-
-        room.speakers = room.speakers.filter((s) => s.name !== name);
-        if (room.activeSpeaker === name) room.activeSpeaker = null;
-        broadcast(roomId);
-    });
-
-    /* START / STOP SESSION (host only) */
-    socket.on("start_session", ({ roomId }) => {
-        const room = rooms[roomId];
-        if (!room || room.users[socket.id]?.role !== "host") return;
-
+        room.activeSpeaker = name;
         room.sessionActive = true;
+        sp.started         = true;
+        room.lastTick      = Date.now();
+
         startRoomTimer(roomId);
         broadcast(roomId);
     });
 
-    socket.on("stop_session", ({ roomId }) => {
+    socket.on("stop_speaker", ({ roomId }) => {
         const room = rooms[roomId];
         if (!room || room.users[socket.id]?.role !== "host") return;
+
+        if (room.activeSpeaker) {
+            const sp = room.speakers.find((s) => s.name === room.activeSpeaker);
+            if (sp) sp.started = true;
+        }
 
         room.sessionActive = false;
         room.activeSpeaker = null;
@@ -187,67 +237,64 @@ io.on("connection", (socket) => {
         broadcast(roomId);
     });
 
-    /* VAD REPORT — clients report who is loudest */
-    socket.on("vad_report", ({ roomId, speakerName }) => {
+    /* SPEAKING MODE */
+    socket.on("set_speaking_mode", ({ roomId, name, mode }) => {
         const room = rooms[roomId];
-        if (!room || !room.sessionActive) return;
+        if (!room) return;
+        const sp = room.speakers.find((s) => s.name === name);
+        if (!sp) return;
+        sp.speakingMode = mode;
+        recalculateTimes(room);
+        broadcast(roomId);
+    });
 
-        if (speakerName) {
-            // Someone is speaking — cancel silence timeout
-            if (room._silenceTimeout) {
-                clearTimeout(room._silenceTimeout);
-                room._silenceTimeout = null;
-            }
-            room.activeSpeaker = speakerName;
-        } else if (!room._silenceTimeout) {
-            // Silence — wait grace period before clearing active speaker
-            room._silenceTimeout = setTimeout(() => {
-                if (rooms[roomId]) {
-                    rooms[roomId].activeSpeaker = null;
-                    rooms[roomId]._silenceTimeout = null;
-                }
-            }, 2500);
+    /* ADD / REMOVE SPEAKER */
+    socket.on("add_speaker", ({ roomId, name }) => {
+        const room = rooms[roomId];
+        if (!room || room.users[socket.id]?.role !== "host") return;
+        if (!room.speakers.find((s) => s.name === name)) {
+            room.speakers.push({ name, remainingMs: 0, totalMs: 0, started: false, speakingMode: null });
+            recalculateTimes(room);
         }
+        broadcast(roomId);
+    });
+
+    socket.on("remove_speaker", ({ roomId, name }) => {
+        const room = rooms[roomId];
+        if (!room || room.users[socket.id]?.role !== "host") return;
+        room.speakers = room.speakers.filter((s) => s.name !== name);
+        if (room.activeSpeaker === name) { room.activeSpeaker = null; room.sessionActive = false; stopRoomTimer(roomId); }
+        recalculateTimes(room);
+        broadcast(roomId);
     });
 
     /* GIFT TIME */
     socket.on("gift_time", ({ roomId, name, amountMs }) => {
         const room = rooms[roomId];
         if (!room) return;
-
         const targetName = name || room.activeSpeaker;
         if (!targetName) return;
-
         const sp = room.speakers.find((s) => s.name === targetName);
-        if (sp) {
-            sp.remainingMs += amountMs || 60000;
-            if (sp.remainingMs > sp.totalMs) sp.totalMs = sp.remainingMs;
-        }
+        if (sp) { sp.remainingMs += amountMs || 60000; if (sp.remainingMs > sp.totalMs) sp.totalMs = sp.remainingMs; }
         broadcast(roomId);
     });
 
-    /* RESET SESSION (host only) */
+    /* RESET SESSION */
     socket.on("reset_session", ({ roomId }) => {
         const room = rooms[roomId];
         if (!room || room.users[socket.id]?.role !== "host") return;
-
         stopRoomTimer(roomId);
-        if (room._silenceTimeout) clearTimeout(room._silenceTimeout);
 
         const newRoom = createEmptyRoom();
-        newRoom.users = { ...room.users };
-        newRoom.config = { ...room.config };
+        newRoom.users         = { ...room.users };
+        newRoom.sessionTitle  = room.sessionTitle;
+        newRoom.totalSessionMs = room.totalSessionMs;
+        newRoom.phase         = room.phase;
 
-        // Re-add current participants as speakers with fresh time
-        Object.values(newRoom.users)
-            .filter((u) => u.role !== "observer")
-            .forEach((u) => {
-                newRoom.speakers.push({
-                    name: u.name,
-                    remainingMs: newRoom.config.timePerSpeakerMs,
-                    totalMs: newRoom.config.timePerSpeakerMs,
-                });
-            });
+        Object.values(newRoom.users).filter((u) => u.role !== "observer").forEach((u) => {
+            newRoom.speakers.push({ name: u.name, remainingMs: 0, totalMs: 0, started: false, speakingMode: null });
+        });
+        recalculateTimes(newRoom);
 
         rooms[roomId] = newRoom;
         broadcast(roomId);
@@ -263,15 +310,16 @@ io.on("connection", (socket) => {
             const { name } = room.users[socket.id];
             delete room.users[socket.id];
 
-            // Remove from speaker list on disconnect
             room.speakers = room.speakers.filter((s) => s.name !== name);
-            if (room.activeSpeaker === name) room.activeSpeaker = null;
-
+            if (room.activeSpeaker === name) {
+                room.activeSpeaker = null;
+                room.sessionActive = false;
+                stopRoomTimer(rid);
+            }
+            recalculateTimes(room);
             broadcast(rid);
         }
     });
 });
-
-/* ---- START SERVER ---- */
 
 server.listen(5000, () => console.log("Server running on port 5000"));
