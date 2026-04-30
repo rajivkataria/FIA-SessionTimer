@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "server",
   "version": "1.0.0",
   "description": "",
@@ -17,5 +18,12 @@
     "multer": "^2.1.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3"
+=======
+  "name": "session-timer",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "python3 -m http.server 8000"
+>>>>>>> fd8fbd97fa6de1d80001bed38e5617ef64580f47
   }
 }
